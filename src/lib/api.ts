@@ -317,7 +317,7 @@ export const api = {
       try {
         let query = supabase
           .from('vehicles')
-          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
+          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), vehicle_images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
           .order('created_at', { ascending: false });
 
         if (statusFilter && statusFilter !== 'all') {
@@ -326,13 +326,36 @@ export const api = {
 
         const { data, error } = await query;
         if (!error && data) {
-          vehicles = data.map((v: any) => ({
-            ...v,
-            reservation: v.reservations?.find((r: any) => r.status === 'active') || null,
-            sale: Array.isArray(v.sale) ? v.sale[0] || null : v.sale || null,
-            images: v.images || [],
-            identifiers: v.identifiers || [],
-          }));
+          vehicles = data.map((v: any) => {
+            let combinedImages: VehicleImage[] = [];
+
+            // 1. مصفوفة الروابط النصية text[] داخل عمود images
+            if (Array.isArray(v.images) && v.images.length > 0 && typeof v.images[0] === 'string') {
+              combinedImages = v.images.map((url: string, idx: number) => ({
+                id: `img-${idx}-${v.id}`,
+                vehicle_id: v.id,
+                storage_path: url,
+                is_primary: idx === 0,
+                created_at: v.created_at,
+              }));
+            }
+            // 2. سجلات جدول vehicle_images
+            else if (Array.isArray(v.vehicle_images) && v.vehicle_images.length > 0) {
+              combinedImages = v.vehicle_images;
+            }
+            // 3. كائنات صور موجودة مسبقاً
+            else if (Array.isArray(v.images) && v.images.length > 0 && typeof v.images[0] === 'object') {
+              combinedImages = v.images;
+            }
+
+            return {
+              ...v,
+              reservation: v.reservations?.find((r: any) => r.status === 'active') || null,
+              sale: Array.isArray(v.sale) ? v.sale[0] || null : v.sale || null,
+              images: combinedImages,
+              identifiers: v.identifiers || [],
+            };
+          });
         }
       } catch (err) {
         console.warn('Supabase getVehicles error, fallback to local:', err);
@@ -389,17 +412,39 @@ export const api = {
       try {
         const { data, error } = await supabase
           .from('vehicles')
-          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
+          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), vehicle_images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
           .eq('id', id)
           .maybeSingle();
 
         if (!error && data) {
+          const v = data as any;
+          let combinedImages: VehicleImage[] = [];
+
+          // 1. مصفوفة الروابط النصية text[] داخل عمود images
+          if (Array.isArray(v.images) && v.images.length > 0 && typeof v.images[0] === 'string') {
+            combinedImages = v.images.map((url: string, idx: number) => ({
+              id: `img-${idx}-${v.id}`,
+              vehicle_id: v.id,
+              storage_path: url,
+              is_primary: idx === 0,
+              created_at: v.created_at,
+            }));
+          }
+          // 2. سجلات جدول vehicle_images
+          else if (Array.isArray(v.vehicle_images) && v.vehicle_images.length > 0) {
+            combinedImages = v.vehicle_images;
+          }
+          // 3. كائنات صور موجودة مسبقاً
+          else if (Array.isArray(v.images) && v.images.length > 0 && typeof v.images[0] === 'object') {
+            combinedImages = v.images;
+          }
+
           return {
-            ...data,
-            reservation: (data as any).reservations?.find((r: any) => r.status === 'active') || null,
-            sale: Array.isArray((data as any).sale) ? (data as any).sale[0] || null : (data as any).sale || null,
-            images: (data as any).images || [],
-            identifiers: (data as any).identifiers || [],
+            ...v,
+            reservation: v.reservations?.find((r: any) => r.status === 'active') || null,
+            sale: Array.isArray(v.sale) ? v.sale[0] || null : v.sale || null,
+            images: combinedImages,
+            identifiers: v.identifiers || [],
           } as Vehicle;
         }
       } catch (err) {

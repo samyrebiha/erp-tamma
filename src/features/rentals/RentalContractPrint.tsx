@@ -217,3 +217,4 @@ export const RentalContractPrint: React.FC = () => {
     </div>
   );
 };
+

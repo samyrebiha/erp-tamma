@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
     purchase_date DATE,
     purchase_price NUMERIC(14,2) CHECK (purchase_price >= 0),
     extra_costs NUMERIC(14,2) NOT NULL DEFAULT 0.00 CHECK (extra_costs >= 0),
+    images TEXT[] DEFAULT '{}'::text[],
     description TEXT,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -536,4 +537,42 @@ INSERT INTO public.sales (
     'paid',
     'تم تسليم السيارة مع وثائق التحويل وكافة المفاتيح الأصلية'
 ) ON CONFLICT (id) DO NOTHING;
+
+-- ====================================================================
+-- 20. إعدادات تخزين الصور ومواءمة الجداول
+-- ====================================================================
+
+-- التأكد من وجود عمود الصور مصفوفة نصوص
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}'::text[];
+
+-- عرض مساعد لتوافق الاستعلامات التي تستخدم cars بدلاً من vehicles
+CREATE OR REPLACE VIEW public.cars AS SELECT * FROM public.vehicles;
+
+-- إعداد حاوية التخزين car-images كحاوية عامة
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('car-images', 'car-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- سياسات الوصول لحاوية الصور
+DO $$
+BEGIN
+    DROP POLICY IF EXISTS "Public car-images select" ON storage.objects;
+    DROP POLICY IF EXISTS "Public car-images insert" ON storage.objects;
+    DROP POLICY IF EXISTS "Public car-images update" ON storage.objects;
+    DROP POLICY IF EXISTS "Public car-images delete" ON storage.objects;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+CREATE POLICY "Public car-images select" ON storage.objects
+FOR SELECT USING (bucket_id = 'car-images');
+
+CREATE POLICY "Public car-images insert" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id = 'car-images');
+
+CREATE POLICY "Public car-images update" ON storage.objects
+FOR UPDATE USING (bucket_id = 'car-images');
+
+CREATE POLICY "Public car-images delete" ON storage.objects
+FOR DELETE USING (bucket_id = 'car-images');
+
 

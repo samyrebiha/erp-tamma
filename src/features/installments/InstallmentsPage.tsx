@@ -549,3 +549,4 @@ export const InstallmentsPage: React.FC = () => {
     </div>
   );
 };
+

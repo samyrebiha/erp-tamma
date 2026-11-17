@@ -418,13 +418,16 @@ export const VehicleDetailsPage: React.FC = () => {
       )}
 
       {/* معرض صور السيارة الفعلي */}
-      <Card title="معرض صور وفحص السيارة" subtitle="صور السيارة المرفقة في النظام">
+      <Card title="معرض صور وفحص السيارة" subtitle="صور السيارة المرفقة في سحابة Supabase Storage">
         <VehicleImageGallery
           vehicleId={vehicle.id}
           images={vehicle.images || []}
           onAddImage={handleAddImage}
           onRemoveImage={handleRemoveImage}
           onSetPrimary={handleSetPrimaryImage}
+          onImagesUpdated={async () => {
+            await loadData(vehicle.id);
+          }}
         />
       </Card>
 

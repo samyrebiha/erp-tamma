@@ -1,15 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Plus, Trash2, Star, Image as ImageIcon, Eye, X } from 'lucide-react';
+import { Camera, Plus, Trash2, Star, Image as ImageIcon, Eye, X, UploadCloud } from 'lucide-react';
 import { VehicleImage } from '../../types';
 import { Button } from '../ui/Button';
+import { uploadAndSaveCarImages, deleteCarImage } from '../../lib/storage';
 
 interface VehicleImageGalleryProps {
   vehicleId: string;
   images: VehicleImage[];
   isEditable?: boolean;
-  onAddImage: (dataUrl: string, isPrimary: boolean) => Promise<void>;
+  onAddImage?: (dataUrl: string, isPrimary: boolean) => Promise<void>;
   onRemoveImage: (imageId: string) => Promise<void>;
   onSetPrimary: (imageId: string) => Promise<void>;
+  onImagesUpdated?: () => Promise<void>;
 }
 
 export const VehicleImageGallery: React.FC<VehicleImageGalleryProps> = ({
@@ -19,6 +21,7 @@ export const VehicleImageGallery: React.FC<VehicleImageGalleryProps> = ({
   onAddImage,
   onRemoveImage,
   onSetPrimary,
+  onImagesUpdated,
 }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -30,21 +33,17 @@ export const VehicleImageGallery: React.FC<VehicleImageGalleryProps> = ({
 
     try {
       setIsUploading(true);
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/')) continue;
+      const existingUrls = images.map((img) => img.storage_path);
+      
+      // رفع الصور مباشرة إلى سحابة Supabase Storage في حاوية car-images وحفظ الرابط في قاعدة البيانات
+      await uploadAndSaveCarImages(vehicleId, files, existingUrls);
 
-        const reader = new FileReader();
-        const readPromise = new Promise<string>((resolve) => {
-          reader.onload = (event) => resolve(event.target?.result as string);
-        });
-        reader.readAsDataURL(file);
-        const dataUrl = await readPromise;
-
-        await onAddImage(dataUrl, images.length === 0 && i === 0);
+      if (onImagesUpdated) {
+        await onImagesUpdated();
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err);
+      alert(err.message || 'حدث خطأ أثناء رفع وحفظ الصور في سحابة Supabase');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
