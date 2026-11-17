@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   Sparkles,
   ChevronLeft,
+  KeyRound,
+  ArrowLeftRight,
+  CreditCard,
+  Wrench,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -30,6 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { to: '/', label: 'لوحة التحكم المركزية', icon: LayoutDashboard },
     { to: '/vehicles', label: 'المخزون والسيارات', icon: Car },
     { to: '/sales', label: 'المبيعات والتسليم', icon: Receipt },
+    { to: '/rentals', label: 'كراء وتأجير السيارات', icon: KeyRound },
+    { to: '/trade-ins', label: 'تبادل السيارات (Échange)', icon: ArrowLeftRight },
+    { to: '/installments', label: 'التقسيط والديون', icon: CreditCard },
+    { to: '/expenses', label: 'مصاريف وصيانة المركبات', icon: Wrench },
     { to: '/customers', label: 'إدارة العملاء', icon: Users },
     { to: '/suppliers', label: 'إدارة الموردين', icon: Truck },
     { to: '/reports', label: 'التقارير والمؤشرات', icon: BarChart3 },

@@ -9,6 +9,11 @@ import {
   VehicleImage,
   VehicleReservation,
   DashboardStats,
+  RentalContract,
+  RentalStatus,
+  TradeIn,
+  PaymentRecord,
+  VehicleExpense,
 } from '../types';
 import { generateReferenceNumber } from './utils';
 
@@ -277,6 +282,10 @@ export const api = {
       }
     }
     return getLocalItem('settings', DEFAULT_SETTINGS);
+  },
+
+  async getShowroomSettings(): Promise<ShowroomSettings> {
+    return this.getSettings();
   },
 
   async updateSettings(settings: Partial<ShowroomSettings>): Promise<ShowroomSettings> {
@@ -1170,6 +1179,358 @@ export const api = {
       recentSales: sales.slice(0, 5),
       recentVehicles: vehicles.slice(0, 5),
     };
+  },
+
+  // --------------------------------------------------
+  // 7. إدارة عقود كراء السيارات (Car Rentals)
+  // --------------------------------------------------
+  async getRentals(): Promise<RentalContract[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('rental_contracts')
+          .select('*, vehicle:vehicles(*), customer:customers(*)')
+          .order('created_at', { ascending: false });
+        if (!error && data) return data as RentalContract[];
+      } catch (err) {
+        console.warn('Supabase getRentals fallback:', err);
+      }
+    }
+    const rentals = getLocalItem<RentalContract[]>('rental_contracts', []);
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
+
+    return rentals.map((r) => ({
+      ...r,
+      vehicle: vehicles.find((v) => v.id === r.vehicle_id) || null,
+      customer: customers.find((c) => c.id === r.customer_id) || null,
+    }));
+  },
+
+  async getRentalById(id: string): Promise<RentalContract | null> {
+    const all = await this.getRentals();
+    return all.find((r) => r.id === id) || null;
+  },
+
+  async createRental(data: Omit<RentalContract, 'id' | 'contract_number' | 'created_at' | 'updated_at'>): Promise<RentalContract> {
+    const id = crypto.randomUUID();
+    const contractNumber = generateReferenceNumber('LOC');
+    const now = new Date().toISOString();
+
+    const newContract: RentalContract = {
+      ...data,
+      id,
+      contract_number: contractNumber,
+      created_at: now,
+      updated_at: now,
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('rental_contracts').insert([newContract]);
+      } catch (err) {
+        console.warn('Supabase createRental fallback:', err);
+      }
+    }
+
+    const current = getLocalItem<RentalContract[]>('rental_contracts', []);
+    setLocalItem('rental_contracts', [newContract, ...current]);
+    return newContract;
+  },
+
+  async updateRentalStatus(id: string, status: RentalStatus, endMileage?: number): Promise<boolean> {
+    const now = new Date().toISOString();
+    if (isSupabaseConfigured) {
+      try {
+        const payload: any = { status, updated_at: now };
+        if (endMileage !== undefined) payload.end_mileage = endMileage;
+        await supabase.from('rental_contracts').update(payload).eq('id', id);
+      } catch (err) {
+        console.warn('Supabase updateRentalStatus error:', err);
+      }
+    }
+
+    const current = getLocalItem<RentalContract[]>('rental_contracts', []);
+    const idx = current.findIndex((r) => r.id === id);
+    if (idx !== -1) {
+      current[idx].status = status;
+      if (endMileage !== undefined) current[idx].end_mileage = endMileage;
+      current[idx].updated_at = now;
+      setLocalItem('rental_contracts', current);
+      return true;
+    }
+    return false;
+  },
+
+  async deleteRental(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('rental_contracts').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase deleteRental error:', err);
+      }
+    }
+    const current = getLocalItem<RentalContract[]>('rental_contracts', []);
+    setLocalItem('rental_contracts', current.filter((r) => r.id !== id));
+    return true;
+  },
+
+  // --------------------------------------------------
+  // 8. إدارة تبادل السيارات (Car Trade-Ins / Échange)
+  // --------------------------------------------------
+  async getTradeIns(): Promise<TradeIn[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('trade_ins')
+          .select('*, showroom_vehicle:vehicles(*), customer:customers(*)')
+          .order('created_at', { ascending: false });
+        if (!error && data) return data as TradeIn[];
+      } catch (err) {
+        console.warn('Supabase getTradeIns fallback:', err);
+      }
+    }
+    const tradeIns = getLocalItem<TradeIn[]>('trade_ins', []);
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
+
+    return tradeIns.map((t) => ({
+      ...t,
+      showroom_vehicle: vehicles.find((v) => v.id === t.showroom_vehicle_id) || null,
+      customer: customers.find((c) => c.id === t.customer_id) || null,
+    }));
+  },
+
+  async getTradeInById(id: string): Promise<TradeIn | null> {
+    const all = await this.getTradeIns();
+    return all.find((t) => t.id === id) || null;
+  },
+
+  async createTradeIn(data: Omit<TradeIn, 'id' | 'reference_number' | 'created_at'>): Promise<TradeIn> {
+    const id = crypto.randomUUID();
+    const referenceNumber = generateReferenceNumber('ECH');
+    const now = new Date().toISOString();
+
+    const newTradeIn: TradeIn = {
+      ...data,
+      id,
+      reference_number: referenceNumber,
+      created_at: now,
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('trade_ins').insert([newTradeIn]);
+        await supabase.from('vehicles').update({ status: 'sold', updated_at: now }).eq('id', data.showroom_vehicle_id);
+      } catch (err) {
+        console.warn('Supabase createTradeIn fallback:', err);
+      }
+    }
+
+    const current = getLocalItem<TradeIn[]>('trade_ins', []);
+    setLocalItem('trade_ins', [newTradeIn, ...current]);
+
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIdx = vehicles.findIndex((v) => v.id === data.showroom_vehicle_id);
+    if (vIdx !== -1) {
+      vehicles[vIdx].status = 'sold';
+      vehicles[vIdx].updated_at = now;
+      setLocalItem('vehicles', vehicles);
+    }
+
+    return newTradeIn;
+  },
+
+  async deleteTradeIn(id: string): Promise<boolean> {
+    const tradeIns = getLocalItem<TradeIn[]>('trade_ins', []);
+    const target = tradeIns.find((t) => t.id === id);
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('trade_ins').delete().eq('id', id);
+        if (target) {
+          await supabase.from('vehicles').update({ status: 'available', updated_at: new Date().toISOString() }).eq('id', target.showroom_vehicle_id);
+        }
+      } catch (err) {
+        console.warn('Supabase deleteTradeIn error:', err);
+      }
+    }
+
+    setLocalItem('trade_ins', tradeIns.filter((t) => t.id !== id));
+    if (target) {
+      const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+      const vIdx = vehicles.findIndex((v) => v.id === target.showroom_vehicle_id);
+      if (vIdx !== -1) {
+        vehicles[vIdx].status = 'available';
+        vehicles[vIdx].updated_at = new Date().toISOString();
+        setLocalItem('vehicles', vehicles);
+      }
+    }
+    return true;
+  },
+
+  // --------------------------------------------------
+  // 9. إدارة دفعات التقسيط وسندات القبض (Payments & Installments)
+  // --------------------------------------------------
+  async getPayments(saleId?: string): Promise<PaymentRecord[]> {
+    if (isSupabaseConfigured) {
+      try {
+        let q = supabase
+          .from('payment_records')
+          .select('*, sale:sales(*), customer:customers(*)')
+          .order('payment_date', { ascending: false });
+        if (saleId) q = q.eq('sale_id', saleId);
+        const { data, error } = await q;
+        if (!error && data) return data as PaymentRecord[];
+      } catch (err) {
+        console.warn('Supabase getPayments fallback:', err);
+      }
+    }
+
+    let payments = getLocalItem<PaymentRecord[]>('payment_records', []);
+    if (saleId) payments = payments.filter((p) => p.sale_id === saleId);
+    const sales = getLocalItem<Sale[]>('sales', DEFAULT_SALES);
+    const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
+
+    return payments.map((p) => ({
+      ...p,
+      sale: sales.find((s) => s.id === p.sale_id) || null,
+      customer: customers.find((c) => c.id === p.customer_id) || null,
+    }));
+  },
+
+  async createPayment(data: Omit<PaymentRecord, 'id' | 'receipt_number' | 'created_at'>): Promise<PaymentRecord> {
+    const id = crypto.randomUUID();
+    const receiptNumber = generateReferenceNumber('REC');
+    const now = new Date().toISOString();
+
+    const newPayment: PaymentRecord = {
+      ...data,
+      id,
+      receipt_number: receiptNumber,
+      created_at: now,
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('payment_records').insert([newPayment]);
+      } catch (err) {
+        console.warn('Supabase createPayment fallback:', err);
+      }
+    }
+
+    const current = getLocalItem<PaymentRecord[]>('payment_records', []);
+    setLocalItem('payment_records', [newPayment, ...current]);
+    return newPayment;
+  },
+
+  async deletePayment(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('payment_records').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase deletePayment error:', err);
+      }
+    }
+    const current = getLocalItem<PaymentRecord[]>('payment_records', []);
+    setLocalItem('payment_records', current.filter((p) => p.id !== id));
+    return true;
+  },
+
+  // --------------------------------------------------
+  // 10. سجل مصاريف تجهيز وصيانة السيارات (Vehicle Expenses)
+  // --------------------------------------------------
+  async getVehicleExpenses(vehicleId?: string): Promise<VehicleExpense[]> {
+    if (isSupabaseConfigured) {
+      try {
+        let q = supabase
+          .from('vehicle_expenses')
+          .select('*, vehicle:vehicles(*)')
+          .order('expense_date', { ascending: false });
+        if (vehicleId) q = q.eq('vehicle_id', vehicleId);
+        const { data, error } = await q;
+        if (!error && data) return data as VehicleExpense[];
+      } catch (err) {
+        console.warn('Supabase getVehicleExpenses fallback:', err);
+      }
+    }
+
+    let expenses = getLocalItem<VehicleExpense[]>('vehicle_expenses', []);
+    if (vehicleId) expenses = expenses.filter((e) => e.vehicle_id === vehicleId);
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+
+    return expenses.map((e) => ({
+      ...e,
+      vehicle: vehicles.find((v) => v.id === e.vehicle_id) || null,
+    }));
+  },
+
+  async createVehicleExpense(data: Omit<VehicleExpense, 'id' | 'created_at'>): Promise<VehicleExpense> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const newExpense: VehicleExpense = {
+      ...data,
+      id,
+      created_at: now,
+    };
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicle_expenses').insert([newExpense]);
+      } catch (err) {
+        console.warn('Supabase createVehicleExpense fallback:', err);
+      }
+    }
+
+    const current = getLocalItem<VehicleExpense[]>('vehicle_expenses', []);
+    setLocalItem('vehicle_expenses', [newExpense, ...current]);
+
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIdx = vehicles.findIndex((v) => v.id === data.vehicle_id);
+    if (vIdx !== -1) {
+      vehicles[vIdx].extra_costs = (vehicles[vIdx].extra_costs || 0) + Number(data.amount);
+      vehicles[vIdx].updated_at = now;
+      setLocalItem('vehicles', vehicles);
+      if (isSupabaseConfigured) {
+        try {
+          await supabase
+            .from('vehicles')
+            .update({ extra_costs: vehicles[vIdx].extra_costs, updated_at: now })
+            .eq('id', data.vehicle_id);
+        } catch (e) {
+          console.warn('Supabase update extra_costs error:', e);
+        }
+      }
+    }
+
+    return newExpense;
+  },
+
+  async deleteVehicleExpense(id: string): Promise<boolean> {
+    const current = getLocalItem<VehicleExpense[]>('vehicle_expenses', []);
+    const target = current.find((e) => e.id === id);
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicle_expenses').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase deleteVehicleExpense error:', err);
+      }
+    }
+
+    setLocalItem('vehicle_expenses', current.filter((e) => e.id !== id));
+
+    if (target) {
+      const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+      const vIdx = vehicles.findIndex((v) => v.id === target.vehicle_id);
+      if (vIdx !== -1) {
+        vehicles[vIdx].extra_costs = Math.max(0, (vehicles[vIdx].extra_costs || 0) - Number(target.amount));
+        vehicles[vIdx].updated_at = new Date().toISOString();
+        setLocalItem('vehicles', vehicles);
+      }
+    }
+    return true;
   },
 };
 

@@ -183,6 +183,84 @@ CREATE TABLE IF NOT EXISTS public.showroom_settings (
 );
 
 -- ====================================================================
+-- 12. جدول عقود كراء وتأجير السيارات (rental_contracts)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.rental_contracts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    contract_number TEXT NOT NULL UNIQUE,
+    vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE RESTRICT,
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    daily_rate NUMERIC(14,2) NOT NULL CHECK (daily_rate >= 0),
+    total_days INTEGER NOT NULL CHECK (total_days > 0),
+    total_amount NUMERIC(14,2) NOT NULL CHECK (total_amount >= 0),
+    deposit_amount NUMERIC(14,2) NOT NULL DEFAULT 0.00 CHECK (deposit_amount >= 0),
+    driver_license_number TEXT,
+    driver_license_issue_date DATE,
+    start_mileage INTEGER,
+    end_mileage INTEGER,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ====================================================================
+-- 13. جدول عمليات تبادل واستبدال السيارات (trade_ins)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.trade_ins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_number TEXT NOT NULL UNIQUE,
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+    showroom_vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE RESTRICT,
+    incoming_brand TEXT NOT NULL,
+    incoming_model TEXT NOT NULL,
+    incoming_year INTEGER,
+    incoming_vin TEXT,
+    incoming_registration_number TEXT,
+    incoming_mileage INTEGER,
+    incoming_estimated_value NUMERIC(14,2) NOT NULL CHECK (incoming_estimated_value >= 0),
+    showroom_vehicle_price NUMERIC(14,2) NOT NULL CHECK (showroom_vehicle_price >= 0),
+    difference_amount NUMERIC(14,2) NOT NULL DEFAULT 0.00 CHECK (difference_amount >= 0),
+    payer TEXT NOT NULL CHECK (payer IN ('customer', 'showroom', 'even')),
+    payment_status TEXT NOT NULL DEFAULT 'paid' CHECK (payment_status IN ('paid', 'unpaid', 'partial')),
+    notes TEXT,
+    trade_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ====================================================================
+-- 14. جدول دفعات وسندات قبض المبيعات (payment_records)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.payment_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    receipt_number TEXT NOT NULL UNIQUE,
+    sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+    payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    payment_method TEXT NOT NULL DEFAULT 'cash',
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ====================================================================
+-- 15. جدول مصاريف تجهيز وصيانة السيارات (vehicle_expenses)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.vehicle_expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE CASCADE,
+    category TEXT NOT NULL CHECK (category IN ('mechanical', 'body_paint', 'spare_parts', 'detailing', 'inspection_fees', 'transport', 'other')),
+    description TEXT NOT NULL,
+    amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    provider_name TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ====================================================================
 -- 12. الدوال التلقائية لتحديث updated_at
 -- ====================================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -299,6 +377,10 @@ ALTER TABLE public.vehicle_reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.showroom_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rental_contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trade_ins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vehicle_expenses ENABLE ROW LEVEL SECURITY;
 
 -- السماح بالوصول الكامل للمستخدمين المصادق عليهم وعبر المفتاح العام (anon)
 CREATE POLICY "RLS_profiles_all" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
@@ -311,6 +393,10 @@ CREATE POLICY "RLS_reservations_all" ON public.vehicle_reservations FOR ALL USIN
 CREATE POLICY "RLS_sales_all" ON public.sales FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "RLS_logs_all" ON public.activity_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "RLS_settings_all" ON public.showroom_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "RLS_rentals_all" ON public.rental_contracts FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "RLS_tradeins_all" ON public.trade_ins FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "RLS_payments_all" ON public.payment_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "RLS_expenses_all" ON public.vehicle_expenses FOR ALL USING (true) WITH CHECK (true);
 
 -- ====================================================================
 -- 15. البيانات الأولية لمعرض حسونة أوتو (Seed Data)

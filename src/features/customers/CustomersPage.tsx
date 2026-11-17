@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Phone, MapPin, Copy, Check, Receipt } from 'lucide-react';
+import { Users, Plus, Phone, MapPin, Copy, Check, Receipt, Trash2, AlertCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Customer } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
@@ -25,6 +25,12 @@ export const CustomersPage: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // نافذة تأكيد حذف العميل
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     loadCustomers();
   }, []);
@@ -45,6 +51,22 @@ export const CustomersPage: React.FC = () => {
     navigator.clipboard.writeText(phone);
     setCopiedPhone(id);
     setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
+  const handleConfirmDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await api.deleteCustomer(customerToDelete.id);
+      setIsDeleteModalOpen(false);
+      setCustomerToDelete(null);
+      await loadCustomers();
+    } catch (err: any) {
+      setDeleteError(err.message || 'تعذر حذف العميل');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleAddCustomer = async (e: React.FormEvent) => {
@@ -133,6 +155,7 @@ export const CustomersPage: React.FC = () => {
                   <th className="px-4 py-3">رقم بطاقة التعريف</th>
                   <th className="px-4 py-3">العمليات والمشتريات</th>
                   <th className="px-4 py-3">إجمالي المدفوعات (د.ج)</th>
+                  <th className="px-4 py-3 text-center">الإجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-divider">
@@ -197,6 +220,21 @@ export const CustomersPage: React.FC = () => {
                     {/* إجمالي المشتريات بالدينار الجزائري */}
                     <td className="px-4 py-3 font-latin font-bold text-navy">
                       {formatCurrency(c.total_spent || 0)}
+                    </td>
+
+                    {/* الإجراءات */}
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => {
+                          setCustomerToDelete(c);
+                          setDeleteError(null);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                        title="حذف هذا العميل"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -278,6 +316,59 @@ export const CustomersPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* نافذة تأكيد حذف العميل */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setCustomerToDelete(null);
+        }}
+        title="تأكيد حذف العميل"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="p-3 rounded-[8px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <p className="text-xs lg:text-sm text-text-secondary leading-relaxed">
+            هل أنت متأكد من رغبتك في حذف العميل{' '}
+            <strong className="text-text-primary">{customerToDelete?.full_name}</strong>{' '}
+            ({customerToDelete?.phone}) من قائمة العملاء؟
+          </p>
+
+          {customerToDelete && (customerToDelete.purchases_count || 0) > 0 && (
+            <div className="p-3 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-normal">
+              تنبيه: هذا العميل مسجل باسمه {customerToDelete.purchases_count} عملية شراء في النظام. حذف العميل لن يحذف عمليات البيع المحمية لكن سيجعل اسم المشتري غير مقترن به.
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-divider">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setCustomerToDelete(null);
+              }}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              isLoading={isDeleting}
+              onClick={handleConfirmDeleteCustomer}
+            >
+              تأكيد حذف العميل
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

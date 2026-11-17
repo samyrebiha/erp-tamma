@@ -168,3 +168,107 @@ export interface DashboardStats {
   recentSales: Sale[];
   recentVehicles: Vehicle[];
 }
+
+// ----------------------------------------------------
+// عقود كراء وتأجير السيارات
+// ----------------------------------------------------
+export type RentalStatus = 'active' | 'completed' | 'cancelled';
+
+export interface RentalContract {
+  id: string;
+  contract_number: string;
+  vehicle_id: string;
+  customer_id: string;
+  start_date: string;
+  end_date: string;
+  daily_rate: number;
+  total_days: number;
+  total_amount: number;
+  deposit_amount: number; // مبلغ الضمان / الكفالة (Caution)
+  driver_license_number?: string | null;
+  driver_license_issue_date?: string | null;
+  start_mileage?: number | null;
+  end_mileage?: number | null;
+  status: RentalStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+
+  // العلاقات
+  vehicle?: Vehicle | null;
+  customer?: Customer | null;
+}
+
+// ----------------------------------------------------
+// عمليات تبادل واستبدال السيارات (Échange)
+// ----------------------------------------------------
+export type TradeInPayer = 'customer' | 'showroom' | 'even';
+
+export interface TradeIn {
+  id: string;
+  reference_number: string;
+  customer_id: string;
+  showroom_vehicle_id: string;
+  incoming_brand: string;
+  incoming_model: string;
+  incoming_year?: number | null;
+  incoming_vin?: string | null;
+  incoming_registration_number?: string | null;
+  incoming_mileage?: number | null;
+  incoming_estimated_value: number;
+  showroom_vehicle_price: number;
+  difference_amount: number; // الفارق المالي (Soulte)
+  payer: TradeInPayer;
+  payment_status: 'paid' | 'unpaid' | 'partial';
+  notes?: string | null;
+  trade_date: string;
+  created_at: string;
+
+  // العلاقات
+  showroom_vehicle?: Vehicle | null;
+  customer?: Customer | null;
+}
+
+// ----------------------------------------------------
+// دفعات التقسيط وسندات القبض (Installments & Payments)
+// ----------------------------------------------------
+export interface PaymentRecord {
+  id: string;
+  sale_id: string;
+  customer_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  receipt_number: string;
+  notes?: string | null;
+  created_at: string;
+
+  sale?: Sale | null;
+  customer?: Customer | null;
+}
+
+// ----------------------------------------------------
+// مصاريف تجهيز وصيانة السيارات (Vehicle Expenses)
+// ----------------------------------------------------
+export type ExpenseCategory =
+  | 'mechanical'
+  | 'body_paint'
+  | 'spare_parts'
+  | 'detailing'
+  | 'inspection_fees'
+  | 'transport'
+  | 'other';
+
+export interface VehicleExpense {
+  id: string;
+  vehicle_id: string;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  expense_date: string;
+  provider_name?: string | null;
+  notes?: string | null;
+  created_at: string;
+
+  vehicle?: Vehicle | null;
+}

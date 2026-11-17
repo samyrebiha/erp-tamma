@@ -11,6 +11,13 @@ import { CustomersPage } from '../features/customers/CustomersPage';
 import { SuppliersPage } from '../features/suppliers/SuppliersPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { RentalsPage } from '../features/rentals/RentalsPage';
+import { RentalContractPrint } from '../features/rentals/RentalContractPrint';
+import { TradeInsPage } from '../features/trade-ins/TradeInsPage';
+import { TradeInDocumentPrint } from '../features/trade-ins/TradeInDocumentPrint';
+import { InstallmentsPage } from '../features/installments/InstallmentsPage';
+import { PaymentReceiptPrint } from '../features/installments/PaymentReceiptPrint';
+import { ExpensesPage } from '../features/expenses/ExpensesPage';
 
 export const router = createBrowserRouter([
   // الصفحات داخل التخطيط العام (مع القائمة والشريط العلوي)
@@ -33,6 +40,22 @@ export const router = createBrowserRouter([
       {
         path: 'sales',
         element: <SalesPage />,
+      },
+      {
+        path: 'rentals',
+        element: <RentalsPage />,
+      },
+      {
+        path: 'trade-ins',
+        element: <TradeInsPage />,
+      },
+      {
+        path: 'installments',
+        element: <InstallmentsPage />,
+      },
+      {
+        path: 'expenses',
+        element: <ExpensesPage />,
       },
       {
         path: 'customers',
@@ -60,6 +83,18 @@ export const router = createBrowserRouter([
   {
     path: 'sales/:id/delivery-document',
     element: <SaleDeliveryDocument />,
+  },
+  {
+    path: 'rentals/:id/contract',
+    element: <RentalContractPrint />,
+  },
+  {
+    path: 'trade-ins/:id/document',
+    element: <TradeInDocumentPrint />,
+  },
+  {
+    path: 'installments/:id/receipt',
+    element: <PaymentReceiptPrint />,
   },
   // إعادة التوجيه الافتراضية
   {

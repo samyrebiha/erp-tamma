@@ -561,6 +561,15 @@ export const VehicleDetailsPage: React.FC = () => {
                   {formatCurrency(totalCost)}
                 </span>
               </div>
+
+              <div className="pt-2">
+                <Link
+                  to="/expenses"
+                  className="block text-center py-1.5 px-3 rounded-[6px] bg-slate-100 text-text-secondary hover:text-primary hover:bg-slate-200 text-[11px] font-semibold transition-colors border border-border"
+                >
+                  سجل مصاريف وتجهيز المركبة ⬅
+                </Link>
+              </div>
             </div>
           </Card>
 
