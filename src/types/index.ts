@@ -97,6 +97,7 @@ export interface Vehicle {
   supplier_id?: string | null;
   purchase_date?: string | null;
   purchase_price?: number | null;
+  selling_price?: number | null;
   extra_costs: number;
   description?: string | null;
   created_by?: string | null;

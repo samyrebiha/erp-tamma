@@ -128,18 +128,28 @@ export const VehiclePrintCard: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-left shrink-0">
-            <span className="text-xs text-text-muted block">حالة السيارة بالمخزون:</span>
-            <span
-              className="inline-block px-3 py-1 rounded text-xs font-bold border mt-0.5"
-              style={{
-                color: VEHICLE_STATUS_CONFIG[vehicle.status]?.textColor || '#000',
-                backgroundColor: VEHICLE_STATUS_CONFIG[vehicle.status]?.bgColor || '#eee',
-                borderColor: VEHICLE_STATUS_CONFIG[vehicle.status]?.borderColor || '#ccc',
-              }}
-            >
-              {VEHICLE_STATUS_CONFIG[vehicle.status]?.label || vehicle.status}
-            </span>
+          <div className="text-left shrink-0 flex items-center gap-3">
+            {vehicle.selling_price && (
+              <div className="text-left p-2 bg-emerald-50 border border-emerald-300 rounded">
+                <span className="text-[10px] text-emerald-800 font-bold block">سعر العرض للزبون:</span>
+                <span className="font-black text-emerald-800 text-base font-latin">
+                  {formatCurrency(vehicle.selling_price)}
+                </span>
+              </div>
+            )}
+            <div>
+              <span className="text-xs text-text-muted block">حالة السيارة بالمخزون:</span>
+              <span
+                className="inline-block px-3 py-1 rounded text-xs font-bold border mt-0.5"
+                style={{
+                  color: VEHICLE_STATUS_CONFIG[vehicle.status]?.textColor || '#000',
+                  backgroundColor: VEHICLE_STATUS_CONFIG[vehicle.status]?.bgColor || '#eee',
+                  borderColor: VEHICLE_STATUS_CONFIG[vehicle.status]?.borderColor || '#ccc',
+                }}
+              >
+                {VEHICLE_STATUS_CONFIG[vehicle.status]?.label || vehicle.status}
+              </span>
+            </div>
           </div>
         </div>
 

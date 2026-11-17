@@ -171,6 +171,9 @@ export const SalesPage: React.FC = () => {
   const handleSelectVehicle = (vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
     const target = vehicles.find((v) => v.id === vehicleId);
+    if (target?.selling_price) {
+      setSalePrice(target.selling_price.toString());
+    }
     if (target?.reservation) {
       setSelectedCustomerId(target.reservation.customer_id);
       setDiscount(target.reservation.deposit_amount.toString());

@@ -100,6 +100,7 @@ export const VehicleDetailsPage: React.FC = () => {
           supplier_id: vData.supplier_id || '',
           purchase_date: vData.purchase_date || '',
           purchase_price: vData.purchase_price || '',
+          selling_price: vData.selling_price || '',
           extra_costs: vData.extra_costs || 0,
           description: vData.description || '',
         });
@@ -202,6 +203,7 @@ export const VehicleDetailsPage: React.FC = () => {
           supplier_id: editFormData.supplier_id || null,
           purchase_date: editFormData.purchase_date || null,
           purchase_price: editFormData.purchase_price ? Number(editFormData.purchase_price) : null,
+          selling_price: editFormData.selling_price ? Number(editFormData.selling_price) : null,
           extra_costs: Number(editFormData.extra_costs) || 0,
           description: editFormData.description.trim() || null,
         },
@@ -545,25 +547,51 @@ export const VehicleDetailsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between pb-2 border-b border-divider">
-                <span className="text-text-muted">سعر الشراء:</span>
+                <span className="text-text-muted">سعر الشراء (التكلفة الأساسية):</span>
                 <span className="font-bold text-text-primary font-latin">
                   {formatCurrency(vehicle.purchase_price)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between pb-2 border-b border-divider">
-                <span className="text-text-muted">المصاريف الإضافية:</span>
+                <span className="text-text-muted">المصاريف الإضافية (تجهيز، صيانة):</span>
                 <span className="font-semibold text-text-primary font-latin">
                   {formatCurrency(vehicle.extra_costs)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <span className="font-bold text-text-primary">إجمالي التكلفة المسجلة:</span>
-                <span className="font-bold text-primary text-sm font-latin">
+              <div className="flex items-center justify-between pb-2 border-b border-divider bg-page/70 p-2 rounded">
+                <span className="font-bold text-text-primary">إجمالي التكلفة الصافية:</span>
+                <span className="font-extrabold text-slate-800 text-sm font-latin">
                   {formatCurrency(totalCost)}
                 </span>
               </div>
+
+              <div className="flex items-center justify-between pb-2 border-b border-divider bg-emerald-50/60 p-2 rounded border border-emerald-100">
+                <div>
+                  <span className="font-bold text-emerald-950 block">سعر البيع المعروض:</span>
+                  <span className="text-[10px] text-emerald-700">السعر المقترح للزبون</span>
+                </div>
+                <span className="font-black text-emerald-700 text-base font-latin">
+                  {vehicle.selling_price ? formatCurrency(vehicle.selling_price) : '— غير محدد —'}
+                </span>
+              </div>
+
+              {vehicle.selling_price && totalCost > 0 && (
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <span className="font-semibold text-text-secondary">الهامش الربحي المتوقع:</span>
+                  <span
+                    className={`font-latin font-bold px-2 py-0.5 rounded text-xs ${
+                      vehicle.selling_price - totalCost >= 0
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {formatCurrency(vehicle.selling_price - totalCost)} (
+                    {(((vehicle.selling_price - totalCost) / totalCost) * 100).toFixed(1)}%)
+                  </span>
+                </div>
+              )}
 
               <div className="pt-2">
                 <Link
@@ -747,7 +775,7 @@ export const VehicleDetailsPage: React.FC = () => {
               onChange={(e) => setEditFormData({ ...editFormData, mileage: e.target.value })}
             />
             <Input
-              label="سعر الشراء"
+              label="سعر الشراء (التكلفة)"
               type="number"
               suffixElement="د.ج"
               dir="ltr"
@@ -761,6 +789,15 @@ export const VehicleDetailsPage: React.FC = () => {
               dir="ltr"
               value={editFormData.extra_costs || ''}
               onChange={(e) => setEditFormData({ ...editFormData, extra_costs: e.target.value })}
+            />
+            <Input
+              label="سعر البيع المعروض (د.ج)"
+              type="number"
+              suffixElement="د.ج"
+              dir="ltr"
+              placeholder="مثال: 6200000"
+              value={editFormData.selling_price || ''}
+              onChange={(e) => setEditFormData({ ...editFormData, selling_price: e.target.value })}
             />
           </div>
 

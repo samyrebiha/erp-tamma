@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS public.vehicles (
     supplier_id UUID REFERENCES public.suppliers(id) ON DELETE SET NULL,
     purchase_date DATE,
     purchase_price NUMERIC(14,2) CHECK (purchase_price >= 0),
+    selling_price NUMERIC(14,2) CHECK (selling_price >= 0),
     extra_costs NUMERIC(14,2) NOT NULL DEFAULT 0.00 CHECK (extra_costs >= 0),
     description TEXT,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -602,8 +603,9 @@ INSERT INTO public.sales (
 -- 20. إعدادات الأداء، الفهارس، ومواءمة العرض والتخزين
 -- ====================================================================
 
--- 1. التأكد من وجود عمود الصور مصفوفة نصوص
+-- 1. التأكد من وجود عمود الصور مصفوفة نصوص وعمود سعر البيع
 ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS images TEXT[] DEFAULT '{}'::text[];
+ALTER TABLE public.vehicles ADD COLUMN IF NOT EXISTS selling_price NUMERIC(14,2) CHECK (selling_price >= 0);
 
 -- 2. عرض مساعد لجدول السيارات آمن ومحمي security_invoker = true
 DROP VIEW IF EXISTS public.cars CASCADE;

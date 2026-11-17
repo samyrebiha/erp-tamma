@@ -62,6 +62,7 @@ export const VehiclesPage: React.FC = () => {
     supplier_id: '',
     purchase_date: new Date().toISOString().split('T')[0],
     purchase_price: '',
+    selling_price: '',
     extra_costs: '0',
     description: '',
   });
@@ -203,6 +204,7 @@ export const VehiclesPage: React.FC = () => {
           supplier_id: finalSupplierId,
           purchase_date: formData.purchase_date || null,
           purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
+          selling_price: formData.selling_price ? Number(formData.selling_price) : null,
           extra_costs: Number(formData.extra_costs) || 0,
           description: formData.description.trim() || null,
         },
@@ -228,6 +230,7 @@ export const VehiclesPage: React.FC = () => {
         supplier_id: '',
         purchase_date: new Date().toISOString().split('T')[0],
         purchase_price: '',
+        selling_price: '',
         extra_costs: '0',
         description: '',
       });
@@ -317,7 +320,8 @@ export const VehiclesPage: React.FC = () => {
                   <th className="px-4 py-3">أبرز الأرقام التعريفية</th>
                   <th className="px-4 py-3">المواصفات</th>
                   <th className="px-4 py-3">تاريخ الدخول</th>
-                  <th className="px-4 py-3">سعر الشراء (د.ج)</th>
+                  <th className="px-4 py-3">سعر الشراء (التكلفة)</th>
+                  <th className="px-4 py-3">سعر البيع (المعروض)</th>
                   <th className="px-4 py-3">الحالة</th>
                   <th className="px-4 py-3 text-center">الإجراءات</th>
                 </tr>
@@ -402,13 +406,47 @@ export const VehiclesPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* سعر الشراء بالدينار الجزائري */}
-                      <td className="px-4 py-3 font-latin font-bold text-text-primary">
-                        {formatCurrency(v.purchase_price)}
+                      {/* سعر الشراء والتكلفة بالدينار الجزائري */}
+                      <td className="px-4 py-3">
+                        <div className="font-latin font-bold text-text-primary">
+                          {formatCurrency(v.purchase_price)}
+                        </div>
                         {v.extra_costs > 0 && (
-                          <div className="text-[10px] text-text-muted">
+                          <div className="text-[10px] text-text-muted mt-0.5">
                             + {formatCurrency(v.extra_costs)} مصاريف
                           </div>
+                        )}
+                        {v.purchase_price && (
+                          <div className="text-[10px] text-slate-500 font-latin font-medium mt-0.5">
+                            التكلفة: {formatCurrency((v.purchase_price || 0) + (v.extra_costs || 0))}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* سعر البيع المعروض والهامش التقديري */}
+                      <td className="px-4 py-3">
+                        {v.selling_price ? (
+                          <div>
+                            <div className="font-latin font-extrabold text-emerald-700 text-[13px]">
+                              {formatCurrency(v.selling_price)}
+                            </div>
+                            {v.purchase_price && (
+                              <div
+                                className={`text-[10px] font-latin font-bold mt-0.5 ${
+                                  v.selling_price - ((v.purchase_price || 0) + (v.extra_costs || 0)) >= 0
+                                    ? 'text-emerald-600'
+                                    : 'text-rose-600'
+                                }`}
+                              >
+                                هامش:{' '}
+                                {formatCurrency(
+                                  v.selling_price - ((v.purchase_price || 0) + (v.extra_costs || 0))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-text-muted text-[11px]">— غير محدد —</span>
                         )}
                       </td>
 
@@ -737,7 +775,7 @@ export const VehiclesPage: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <Input
                 label="تاريخ الدخول / الشراء"
                 type="date"
@@ -745,7 +783,7 @@ export const VehiclesPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
               />
               <Input
-                label="سعر الشراء"
+                label="سعر الشراء (التكلفة)"
                 type="number"
                 placeholder="مثال: 5500000"
                 suffixElement="د.ج"
@@ -754,7 +792,7 @@ export const VehiclesPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value })}
               />
               <Input
-                label="مصاريف إضافية (صيانة، رسوم، نقل)"
+                label="مصاريف إضافية (تجهيز، صيانة، رسوم)"
                 type="number"
                 placeholder="0"
                 suffixElement="د.ج"
@@ -762,7 +800,60 @@ export const VehiclesPage: React.FC = () => {
                 value={formData.extra_costs}
                 onChange={(e) => setFormData({ ...formData, extra_costs: e.target.value })}
               />
+              <Input
+                label="سعر البيع المعروض / المقترح"
+                type="number"
+                placeholder="مثال: 6100000"
+                suffixElement="د.ج"
+                dir="ltr"
+                value={formData.selling_price}
+                onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+              />
             </div>
+
+            {/* بطاقة الحسابات المالية اللحظية */}
+            {(formData.purchase_price || formData.selling_price) && (
+              <div className="mt-3 p-2.5 bg-page rounded-[8px] border border-border flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="text-text-muted">التكلفة الصافية: </span>
+                    <span className="font-latin font-bold text-text-primary">
+                      {formatCurrency(
+                        (Number(formData.purchase_price) || 0) + (Number(formData.extra_costs) || 0)
+                      )}
+                    </span>
+                  </div>
+                  {formData.selling_price && (
+                    <div>
+                      <span className="text-text-muted">سعر البيع: </span>
+                      <span className="font-latin font-extrabold text-emerald-700">
+                        {formatCurrency(Number(formData.selling_price) || 0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {formData.purchase_price && formData.selling_price && (
+                  <div>
+                    <span className="text-text-muted">هامش الربح المتوقع: </span>
+                    <span
+                      className={`font-latin font-bold px-2 py-0.5 rounded ${
+                        Number(formData.selling_price) -
+                          ((Number(formData.purchase_price) || 0) + (Number(formData.extra_costs) || 0)) >=
+                        0
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}
+                    >
+                      {formatCurrency(
+                        Number(formData.selling_price) -
+                          ((Number(formData.purchase_price) || 0) + (Number(formData.extra_costs) || 0))
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* القسم 4: الملاحظات والفحص */}
