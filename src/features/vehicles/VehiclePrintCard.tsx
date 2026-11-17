@@ -11,6 +11,7 @@ import {
   VEHICLE_STATUS_CONFIG,
 } from '../../lib/constants';
 import { Button } from '../../components/ui/Button';
+import { QRCodeView } from '../../components/ui/QRCodeView';
 
 export const VehiclePrintCard: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -81,18 +82,21 @@ export const VehiclePrintCard: React.FC = () => {
 
       {/* ورقة الوثيقة A4 الرسمية */}
       <div className="max-w-4xl mx-auto bg-white p-8 sm:p-12 border border-border shadow-sm print-container print:p-0 print:border-none print:shadow-none text-text-primary">
-        {/* ترويسة المعرض */}
+        {/* ترويسة المعرض الرسمية مع الشعار */}
         <div className="flex items-center justify-between pb-6 border-b-2 border-slate-900">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-navy">
-              {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
-            </h1>
-            <p className="text-xs text-text-secondary">
-              {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض رقم 44'}
-            </p>
-            <p className="text-xs text-text-secondary font-latin">
-              هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}
-            </p>
+          <div className="flex items-center gap-4">
+            <img src="/logo.svg" alt="شعار المعرض" className="w-16 h-16 object-contain shrink-0" />
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-navy">
+                {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
+              </h1>
+              <p className="text-xs text-text-secondary">
+                {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض رقم 44'}
+              </p>
+              <p className="text-xs text-text-secondary font-latin">
+                هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}
+              </p>
+            </div>
           </div>
 
           <div className="text-left space-y-1">
@@ -103,21 +107,31 @@ export const VehiclePrintCard: React.FC = () => {
           </div>
         </div>
 
-        {/* ملخص الماركة والحالة */}
-        <div className="my-6 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-          <div>
-            <span className="text-xs text-text-muted block">السيارة والموديل:</span>
-            <span className="text-xl font-bold text-navy">
-              {vehicle.brand} {vehicle.model}
-            </span>
-            <span className="text-xs text-text-secondary mr-2">
-              ({vehicle.trim || 'فئة قياسية'})
-            </span>
+        {/* ملخص الماركة والحالة والصورة إن وجدت */}
+        <div className="my-6 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {vehicle.images && vehicle.images.length > 0 && (
+              <img
+                src={vehicle.images.find((img) => img.is_primary)?.storage_path || vehicle.images[0].storage_path}
+                alt={vehicle.model}
+                className="w-24 h-18 object-cover rounded border border-slate-300 shrink-0"
+              />
+            )}
+            <div>
+              <span className="text-xs text-text-muted block">السيارة والموديل:</span>
+              <span className="text-xl font-bold text-navy">
+                {vehicle.brand} {vehicle.model}
+              </span>
+              <span className="text-xs text-text-secondary mr-2">
+                ({vehicle.trim || 'فئة قياسية'})
+              </span>
+            </div>
           </div>
 
-          <div className="text-left">
+          <div className="text-left shrink-0">
             <span className="text-xs text-text-muted block">حالة السيارة بالمخزون:</span>
-            <span className="inline-block px-3 py-1 rounded text-xs font-bold border mt-0.5"
+            <span
+              className="inline-block px-3 py-1 rounded text-xs font-bold border mt-0.5"
               style={{
                 color: VEHICLE_STATUS_CONFIG[vehicle.status]?.textColor || '#000',
                 backgroundColor: VEHICLE_STATUS_CONFIG[vehicle.status]?.bgColor || '#eee',
@@ -221,11 +235,19 @@ export const VehiclePrintCard: React.FC = () => {
           </div>
         )}
 
-        {/* تذييل الوثيقة الرسمي وختم المعرض */}
+        {/* تذييل الوثيقة الرسمي وختم المعرض ورمز التحقق QR Code */}
         <div className="mt-12 pt-6 border-t border-slate-300 flex items-end justify-between avoid-break">
-          <div className="text-xs text-text-muted space-y-1">
-            <p>تم استخراج هذه البطاقة آلياً من نظام إدارة المعرض الداخلي (ERP Tamma).</p>
-            <p className="font-latin">تاريخ المعاينة والطباعة: {new Date().toLocaleString('ar-DZ')}</p>
+          <div className="flex items-center gap-4">
+            <QRCodeView
+              value={`معرض حسونة لبيع وشراء السيارات\nبطاقة معلومات سيارة\nالسيارة: ${vehicle.brand} ${vehicle.model}\nVIN: ${vehicle.identifiers?.find((i) => i.identifier_type === 'vin')?.identifier_value || '—'}\nالحالة: ${vehicle.status}\nرمز التحقق: CAR-${vehicle.id.slice(0, 8).toUpperCase()}`}
+              size={80}
+              label="رمز التحقق المعتمد"
+            />
+            <div className="text-xs text-text-muted space-y-1">
+              <p className="font-semibold text-slate-800">معرض حسونة لبيع وشراء السيارات</p>
+              <p>وثيقة إلكترونية موثقة ومطابقة لسجلات المخزون الداخلي للمؤسسة.</p>
+              <p className="font-latin text-[11px]">تاريخ المعاينة والطباعة: {new Date().toLocaleString('ar-DZ')}</p>
+            </div>
           </div>
 
           <div className="text-center w-52">

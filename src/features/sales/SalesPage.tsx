@@ -156,8 +156,22 @@ export const SalesPage: React.FC = () => {
   };
 
   const availableVehicles = vehicles.filter(
-    (v) => v.status === 'available' || v.id === selectedVehicleId
+    (v) => v.status === 'available' || v.status === 'reserved' || v.id === selectedVehicleId
   );
+
+  const selectedVehicleObj = vehicles.find((v) => v.id === selectedVehicleId);
+
+  const handleSelectVehicle = (vehicleId: string) => {
+    setSelectedVehicleId(vehicleId);
+    const target = vehicles.find((v) => v.id === vehicleId);
+    if (target?.reservation) {
+      setSelectedCustomerId(target.reservation.customer_id);
+      setDiscount(target.reservation.deposit_amount.toString());
+      setNotes(
+        `تم خصم مبلغ العربون المدفوع مسبقاً بقيمة ${target.reservation.deposit_amount} د.ج من إجمالي السعر المتفق عليه.`
+      );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -316,19 +330,32 @@ export const SalesPage: React.FC = () => {
           {/* اختيار السيارة */}
           <div>
             <Select
-              label="السيارة المراد بيعها (من المخزون المتاح)"
+              label="السيارة المراد بيعها (من المخزون المتاح أو المحجوز)"
               isRequired
               value={selectedVehicleId}
-              onChange={(e) => setSelectedVehicleId(e.target.value)}
+              onChange={(e) => handleSelectVehicle(e.target.value)}
               options={availableVehicles.map((v) => {
                 const vin = v.identifiers?.find((i) => i.identifier_type === 'vin')?.identifier_value;
+                const reservedTag = v.status === 'reserved' ? ' [محجوزة بعربون]' : '';
                 return {
                   value: v.id,
-                  label: `${v.brand} ${v.model} (${v.manufacture_year || '—'}) - ${v.color || ''} [VIN: ${vin || '—'}]`,
+                  label: `${v.brand} ${v.model} (${v.manufacture_year || '—'}) - ${v.color || ''}${reservedTag} [VIN: ${vin || '—'}]`,
                 };
               })}
               placeholder="— حدد السيارة من القائمة —"
             />
+
+            {selectedVehicleObj?.status === 'reserved' && selectedVehicleObj.reservation && (
+              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-center justify-between">
+                <span>
+                  هذه السيارة محجوزة مسبقاً بعربون قدره:{' '}
+                  <strong className="font-latin">
+                    {formatCurrency(selectedVehicleObj.reservation.deposit_amount)}
+                  </strong>
+                </span>
+                <span className="text-[11px] text-amber-700">تم احتساب العربون كخصم تلقائياً</span>
+              </div>
+            )}
           </div>
 
           {/* اختيار المشتري مع زر إضافة عميل جديد */}

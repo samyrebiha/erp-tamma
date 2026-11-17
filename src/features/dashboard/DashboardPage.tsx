@@ -131,7 +131,14 @@ export const DashboardPage: React.FC = () => {
           {/* العنوان الرئيسي للوحة */}
           <div className="mt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-white p-1.5 shadow-md shrink-0 flex items-center justify-center border border-white/20">
+                  <img
+                    src="/logo.svg"
+                    alt="شعار معرض حسونة"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
                   {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
                 </h1>
@@ -234,7 +241,11 @@ export const DashboardPage: React.FC = () => {
         <StatCard
           title="السيارات المتاحة بالمخزون"
           value={stats.availableVehiclesCount}
-          subtitle="جاهزة للبيع والتسليم المباشر"
+          subtitle={
+            stats.reservedVehiclesCount > 0
+              ? `يوجد ${stats.reservedVehiclesCount} سيارة محجوزة بالعربون`
+              : 'جاهزة للبيع والتسليم المباشر'
+          }
           icon={<Car className="w-5 h-5 text-primary" />}
         />
         <StatCard

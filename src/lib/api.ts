@@ -6,6 +6,8 @@ import {
   Sale,
   ShowroomSettings,
   VehicleIdentifier,
+  VehicleImage,
+  VehicleReservation,
   DashboardStats,
 } from '../types';
 import { generateReferenceNumber } from './utils';
@@ -326,13 +328,24 @@ export const api = {
       vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
       const suppliers = getLocalItem<Supplier[]>('suppliers', DEFAULT_SUPPLIERS);
       const sales = getLocalItem<Sale[]>('sales', DEFAULT_SALES);
+      const reservations = getLocalItem<VehicleReservation[]>('reservations', []);
+      const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
 
       // ربط العلاقات محلياً
-      vehicles = vehicles.map((v) => ({
-        ...v,
-        supplier: suppliers.find((s) => s.id === v.supplier_id) || null,
-        sale: sales.find((s) => s.vehicle_id === v.id) || null,
-      }));
+      vehicles = vehicles.map((v) => {
+        const activeRes = reservations.find((r) => r.vehicle_id === v.id && r.status === 'active') || null;
+        if (activeRes) {
+          activeRes.customer = customers.find((c) => c.id === activeRes.customer_id) || null;
+        }
+
+        return {
+          ...v,
+          supplier: suppliers.find((s) => s.id === v.supplier_id) || null,
+          sale: sales.find((s) => s.vehicle_id === v.id) || null,
+          reservation: activeRes,
+          images: v.images || [],
+        };
+      });
 
       if (statusFilter && statusFilter !== 'all') {
         vehicles = vehicles.filter((v) => v.status === statusFilter);
@@ -478,6 +491,130 @@ export const api = {
     setLocalItem('vehicles', vehicles);
 
     return updatedVehicle;
+  },
+
+  async deleteVehicle(id: string): Promise<boolean> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const target = vehicles.find((v) => v.id === id);
+    if (!target) throw new Error('السيارة غير موجودة في النظام');
+    if (target.status === 'sold') {
+      throw new Error('لا يمكن حذف سيارة تم بيعها وإخراجها للمشتري؛ السجل محمي قانونياً');
+    }
+
+    const filtered = vehicles.filter((v) => v.id !== id);
+    setLocalItem('vehicles', filtered);
+    return true;
+  },
+
+  async reserveVehicle(data: {
+    vehicleId: string;
+    customerId: string;
+    depositAmount: number;
+    expiresAt?: string;
+    notes?: string;
+  }): Promise<VehicleReservation> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIndex = vehicles.findIndex((v) => v.id === data.vehicleId);
+    if (vIndex === -1) throw new Error('السيارة غير موجودة');
+    if (vehicles[vIndex].status !== 'available') {
+      throw new Error('لا يمكن حجز سيارة غير متاحة في المخزون');
+    }
+
+    const reservationId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const newReservation: VehicleReservation = {
+      id: reservationId,
+      vehicle_id: data.vehicleId,
+      customer_id: data.customerId,
+      deposit_amount: data.depositAmount,
+      reserved_at: now,
+      expires_at: data.expiresAt || null,
+      notes: data.notes || null,
+      status: 'active',
+    };
+
+    vehicles[vIndex].status = 'reserved';
+    vehicles[vIndex].updated_at = now;
+    setLocalItem('vehicles', vehicles);
+
+    const reservations = getLocalItem<VehicleReservation[]>('reservations', []);
+    setLocalItem('reservations', [newReservation, ...reservations]);
+
+    return newReservation;
+  },
+
+  async cancelReservation(vehicleId: string): Promise<boolean> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
+    if (vIndex !== -1) {
+      vehicles[vIndex].status = 'available';
+      vehicles[vIndex].updated_at = new Date().toISOString();
+      setLocalItem('vehicles', vehicles);
+    }
+
+    const reservations = getLocalItem<VehicleReservation[]>('reservations', []);
+    const updated = reservations.map((r) =>
+      r.vehicle_id === vehicleId && r.status === 'active'
+        ? { ...r, status: 'cancelled' as const }
+        : r
+    );
+    setLocalItem('reservations', updated);
+    return true;
+  },
+
+  async addVehicleImage(vehicleId: string, storagePath: string, isPrimary = false): Promise<VehicleImage> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
+    if (vIndex === -1) throw new Error('السيارة غير موجودة');
+
+    const existingImages = vehicles[vIndex].images || [];
+    const shouldBePrimary = isPrimary || existingImages.length === 0;
+
+    const newImg: VehicleImage = {
+      id: crypto.randomUUID(),
+      vehicle_id: vehicleId,
+      storage_path: storagePath,
+      is_primary: shouldBePrimary,
+      created_at: new Date().toISOString(),
+    };
+
+    if (shouldBePrimary) {
+      existingImages.forEach((img) => (img.is_primary = false));
+    }
+
+    vehicles[vIndex].images = [...existingImages, newImg];
+    vehicles[vIndex].updated_at = new Date().toISOString();
+    setLocalItem('vehicles', vehicles);
+
+    return newImg;
+  },
+
+  async removeVehicleImage(vehicleId: string, imageId: string): Promise<boolean> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
+    if (vIndex === -1) return false;
+
+    let images = (vehicles[vIndex].images || []).filter((img) => img.id !== imageId);
+    if (images.length > 0 && !images.some((img) => img.is_primary)) {
+      images[0].is_primary = true;
+    }
+    vehicles[vIndex].images = images;
+    vehicles[vIndex].updated_at = new Date().toISOString();
+    setLocalItem('vehicles', vehicles);
+    return true;
+  },
+
+  async setPrimaryImage(vehicleId: string, imageId: string): Promise<boolean> {
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+    const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
+    if (vIndex === -1) return false;
+
+    (vehicles[vIndex].images || []).forEach((img) => {
+      img.is_primary = img.id === imageId;
+    });
+    vehicles[vIndex].updated_at = new Date().toISOString();
+    setLocalItem('vehicles', vehicles);
+    return true;
   },
 
   // --------------------------------------------------
@@ -683,6 +820,7 @@ export const api = {
     const suppliers = await this.getSuppliers();
 
     const availableVehicles = vehicles.filter((v) => v.status === 'available');
+    const reservedVehicles = vehicles.filter((v) => v.status === 'reserved');
     const soldVehicles = vehicles.filter((v) => v.status === 'sold');
 
     const totalInventoryPurchaseValue = availableVehicles.reduce(
@@ -692,6 +830,7 @@ export const api = {
 
     return {
       availableVehiclesCount: availableVehicles.length,
+      reservedVehiclesCount: reservedVehicles.length,
       soldVehiclesCount: soldVehicles.length,
       customersCount: customers.length,
       suppliersCount: suppliers.length,

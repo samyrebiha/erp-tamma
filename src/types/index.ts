@@ -70,6 +70,18 @@ export interface VehicleImage {
   created_at: string;
 }
 
+export interface VehicleReservation {
+  id: string;
+  vehicle_id: string;
+  customer_id: string;
+  deposit_amount: number;
+  reserved_at: string;
+  expires_at?: string | null;
+  notes?: string | null;
+  status: 'active' | 'converted' | 'cancelled';
+  customer?: Customer | null;
+}
+
 export interface Vehicle {
   id: string;
   brand: string;
@@ -96,6 +108,7 @@ export interface Vehicle {
   identifiers?: VehicleIdentifier[];
   images?: VehicleImage[];
   sale?: Sale | null;
+  reservation?: VehicleReservation | null;
 }
 
 export interface Sale {
@@ -147,6 +160,7 @@ export interface ShowroomSettings {
 
 export interface DashboardStats {
   availableVehiclesCount: number;
+  reservedVehiclesCount: number;
   soldVehiclesCount: number;
   customersCount: number;
   suppliersCount: number;

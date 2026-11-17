@@ -12,6 +12,7 @@ import {
   PAYMENT_STATUS_CONFIG,
 } from '../../lib/constants';
 import { Button } from '../../components/ui/Button';
+import { QRCodeView } from '../../components/ui/QRCodeView';
 
 export const SaleDeliveryDocument: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -88,19 +89,22 @@ export const SaleDeliveryDocument: React.FC = () => {
 
       {/* ورقة الوثيقة الرسمية بحجم A4 */}
       <div className="max-w-4xl mx-auto bg-white p-8 sm:p-12 border border-border shadow-sm print-container print:p-0 print:border-none print:shadow-none text-text-primary">
-        {/* ترويسة المعرض الرسمية */}
+        {/* ترويسة المعرض الرسمية مع الشعار */}
         <div className="flex items-start justify-between pb-6 border-b-2 border-slate-900">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-navy">
-              {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
-            </h1>
-            <p className="text-xs text-text-secondary">
-              {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44'}
-            </p>
-            <div className="flex items-center gap-4 text-xs text-text-secondary font-latin pt-0.5">
-              <span>هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}</span>
-              <span>س.ت: {settings?.commercial_register || '16/00-9874561B21'}</span>
-              <span>ر.ج: {settings?.tax_number || '002116098745612'}</span>
+          <div className="flex items-start gap-4">
+            <img src="/logo.svg" alt="شعار المعرض" className="w-16 h-16 object-contain shrink-0" />
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-navy">
+                {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
+              </h1>
+              <p className="text-xs text-text-secondary">
+                {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44'}
+              </p>
+              <div className="flex items-center gap-4 text-xs text-text-secondary font-latin pt-0.5">
+                <span>هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}</span>
+                <span>س.ت: {settings?.commercial_register || '16/00-9874561B21'}</span>
+                <span>ر.ج: {settings?.tax_number || '002116098745612'}</span>
+              </div>
             </div>
           </div>
 
@@ -290,6 +294,24 @@ export const SaleDeliveryDocument: React.FC = () => {
               </p>
             )}
           </div>
+        </div>
+
+        {/* رمز التحقق الرقمي الرسمي ورمز الاستجابة السريعة QR Code */}
+        <div className="mb-8 p-3 bg-slate-50 border border-slate-300 rounded flex items-center justify-between avoid-break">
+          <div className="space-y-1 text-xs">
+            <span className="font-bold text-navy block">التحقق الإلكتروني من صحة الوثيقة:</span>
+            <p className="text-text-secondary text-[11px]">
+              تحمل هذه الوثيقة طابع التحقق الإلكتروني المشفر الصادر عن معرض حسونة لبيع وشراء السيارات.
+            </p>
+            <p className="font-mono text-[10px] text-text-muted font-latin">
+              DOCUMENT HASH: {sale.id.toUpperCase()} • REF: {sale.reference_number}
+            </p>
+          </div>
+          <QRCodeView
+            value={`معرض حسونة لبيع وشراء السيارات\nوثيقة إخراج وتسليم سيارة معتمدة\nرقم الوثيقة: ${sale.reference_number}\nالتاريخ: ${sale.sale_date}\nالمشتري: ${customer?.full_name || ''}\nالسيارة: ${vehicle.brand} ${vehicle.model}\nVIN: ${vehicle.identifiers?.find((i) => i.identifier_type === 'vin')?.identifier_value || ''}\nالمبلغ المستحق: ${netPrice} د.ج\nالحالة: ${sale.payment_status}`}
+            size={88}
+            label="الختم الرقمي"
+          />
         </div>
 
         {/* خانات التوقيع الرسمية */}

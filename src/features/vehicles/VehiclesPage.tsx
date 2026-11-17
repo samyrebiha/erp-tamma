@@ -197,46 +197,55 @@ export const VehiclesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* شريط الإجراءات والتصفية */}
-      <div className="bg-surface rounded-card border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* حقل البحث الشامل */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-text-muted absolute right-3.5 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="البحث بالماركة، الطراز، VIN، رقم المحرك، اللوحة..."
-              className="w-full rounded-[8px] border border-border bg-page px-3.5 pr-10 py-2 text-xs text-text-primary placeholder:text-text-muted focus:bg-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-
-          {/* فلتر الحالة */}
-          <div className="w-full sm:w-48">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="تصفية حسب حالة السيارة"
-              className="w-full rounded-[8px] border border-border bg-page px-3 py-2 text-xs text-text-primary focus:bg-white focus:border-primary focus:outline-none"
+      {/* شريط الإجراءات والتصفية السريعة */}
+      <div className="space-y-3">
+        {/* أزرار الفلترة السريعة (Filter Chips) */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: 'all', label: 'كافة سيارات المعرض' },
+            { id: 'available', label: 'متاحة في المخزون' },
+            { id: 'reserved', label: 'محجوزة بالعربون' },
+            { id: 'sold', label: 'مباعة / مخرجة' },
+            { id: 'under_process', label: 'قيد الإجراء' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                statusFilter === tab.id
+                  ? 'bg-navy text-white border-navy shadow-xs'
+                  : 'bg-white text-text-secondary border-border hover:bg-page hover:text-text-primary'
+              }`}
             >
-              <option value="all">كافة الحالات</option>
-              <option value="available">متاحة في المخزون</option>
-              <option value="reserved">محجوزة</option>
-              <option value="sold">مباعة / مخرجة</option>
-              <option value="under_process">قيد الإجراء</option>
-            </select>
-          </div>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* زر إضافة سيارة */}
-        <Button
-          variant="primary"
-          icon={<Plus className="w-4 h-4" />}
-          onClick={() => setIsAddModalOpen(true)}
-        >
-          إضافة سيارة جديدة
-        </Button>
+        <div className="bg-surface rounded-card border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* حقل البحث الشامل */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-text-muted absolute right-3.5 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="البحث بالماركة، الطراز، VIN، رقم المحرك، اللوحة..."
+                className="w-full rounded-[8px] border border-border bg-page px-3.5 pr-10 py-2 text-xs text-text-primary placeholder:text-text-muted focus:bg-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          {/* زر إضافة سيارة */}
+          <Button
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            إضافة سيارة جديدة
+          </Button>
+        </div>
       </div>
 
       {/* جدول المخزون */}
@@ -269,16 +278,32 @@ export const VehiclesPage: React.FC = () => {
                 {vehicles.map((v) => {
                   const vin = v.identifiers?.find((i) => i.identifier_type === 'vin')?.identifier_value;
                   const reg = v.identifiers?.find((i) => i.identifier_type === 'registration_number')?.identifier_value;
+                  const primaryImg = v.images?.find((img) => img.is_primary) || v.images?.[0];
 
                   return (
                     <tr key={v.id} className="hover:bg-page/50 transition-colors">
-                      {/* السيارة والطراز */}
+                      {/* السيارة والطراز مع المصغرة */}
                       <td className="px-4 py-3">
-                        <div className="font-bold text-text-primary text-sm">
-                          {v.brand} {v.model}
-                        </div>
-                        <div className="text-text-muted text-[11px]">
-                          {v.trim || 'فئة قياسية'} • {v.manufacture_year || '—'} • {v.color || '—'}
+                        <div className="flex items-center gap-3">
+                          {primaryImg ? (
+                            <img
+                              src={primaryImg.storage_path}
+                              alt={v.model}
+                              className="w-12 h-9 rounded object-cover border border-border shrink-0 shadow-2xs"
+                            />
+                          ) : (
+                            <div className="w-12 h-9 rounded bg-slate-100 border border-border flex items-center justify-center text-slate-400 shrink-0">
+                              <Car className="w-5 h-5 opacity-40" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-text-primary text-sm">
+                              {v.brand} {v.model}
+                            </div>
+                            <div className="text-text-muted text-[11px]">
+                              {v.trim || 'فئة قياسية'} • {v.manufacture_year || '—'} • {v.color || '—'}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
@@ -342,6 +367,11 @@ export const VehiclesPage: React.FC = () => {
                       {/* الحالة */}
                       <td className="px-4 py-3">
                         <VehicleStatusBadge status={v.status} />
+                        {v.status === 'reserved' && v.reservation && (
+                          <div className="text-[10px] text-amber-700 font-latin font-bold mt-0.5">
+                            عربون: {formatCurrency(v.reservation.deposit_amount)}
+                          </div>
+                        )}
                       </td>
 
                       {/* الإجراءات */}

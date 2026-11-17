@@ -56,12 +56,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-4 border-b border-divider bg-gradient-to-b from-slate-50 to-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* شعار معرض حسونة الأنيق */}
-              <div className="relative w-11 h-11 rounded-card bg-gradient-to-br from-navy via-[#1e3a8a] to-primary flex items-center justify-center text-white shadow-md border border-white/20 shrink-0">
-                <Car className="w-6 h-6 text-white" />
-                <span className="absolute -bottom-1 -left-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white">
-                  ★
-                </span>
+              {/* شعار معرض حسونة الرسمي */}
+              <div className="relative w-11 h-11 rounded-card bg-white flex items-center justify-center p-1 shadow-md border border-border shrink-0 overflow-hidden">
+                <img
+                  src="/logo.svg"
+                  alt="شعار معرض حسونة"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
               </div>
 
               <div className="overflow-hidden">
