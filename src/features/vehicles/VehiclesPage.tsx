@@ -74,6 +74,12 @@ export const VehiclesPage: React.FC = () => {
     { identifier_type: 'registration_number', custom_type_name: '', identifier_value: '' },
   ]);
 
+  // حالة إضافة مورد مخصص/جديد أثناء تسجيل السيارة
+  const [supplierMode, setSupplierMode] = useState<'existing' | 'new'>('existing');
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierPhone, setNewSupplierPhone] = useState('');
+  const [saveNewSupplierPermanently, setSaveNewSupplierPermanently] = useState(true);
+
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -157,6 +163,23 @@ export const VehiclesPage: React.FC = () => {
 
     try {
       setIsSubmitting(true);
+
+      // معالجة إضافة المورد الجديد في حال تم اختياره
+      let finalSupplierId = formData.supplier_id || null;
+      if (supplierMode === 'new' && newSupplierName.trim()) {
+        try {
+          const createdSupplier = await api.createSupplier({
+            name: newSupplierName.trim(),
+            phone: newSupplierPhone.trim() || '—',
+            notes: 'تم تسجيله أثناء إضافة سيارة جديدة للمخزون',
+          });
+          finalSupplierId = createdSupplier.id;
+          setSuppliers((prev) => [createdSupplier, ...prev]);
+        } catch (sErr) {
+          console.warn('Error creating inline supplier:', sErr);
+        }
+      }
+
       const cleanIdentifiers = identifiers
         .filter((i) => i.identifier_value.trim() !== '')
         .map((i) => ({
@@ -177,7 +200,7 @@ export const VehiclesPage: React.FC = () => {
           mileage: formData.mileage ? Number(formData.mileage) : null,
           condition_notes: formData.condition_notes.trim() || null,
           status: formData.status,
-          supplier_id: formData.supplier_id || null,
+          supplier_id: finalSupplierId,
           purchase_date: formData.purchase_date || null,
           purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
           extra_costs: Number(formData.extra_costs) || 0,
@@ -187,6 +210,9 @@ export const VehiclesPage: React.FC = () => {
       );
 
       setIsAddModalOpen(false);
+      setSupplierMode('existing');
+      setNewSupplierName('');
+      setNewSupplierPhone('');
       // إعادة تعيين النموذج
       setFormData({
         brand: '',
@@ -636,14 +662,82 @@ export const VehiclesPage: React.FC = () => {
             <h4 className="text-xs font-bold text-navy uppercase tracking-wider mb-3 pb-1 border-b border-divider">
               3. بيانات دخول المخزون والتكلفة بالدينار الجزائري (د.ج)
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <Select
-                label="المورد"
-                value={formData.supplier_id}
-                onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
-                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-                placeholder="— بدون مورد / شراء فردي —"
-              />
+
+            {/* محدد نوع المورد: مسجل مسبقاً أو كتابة مورد جديد */}
+            <div className="mb-3 p-3 bg-page rounded-[8px] border border-border">
+              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-text-secondary mb-2.5">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="supplier_selection_mode"
+                    checked={supplierMode === 'existing'}
+                    onChange={() => setSupplierMode('existing')}
+                    className="text-primary focus:ring-primary"
+                  />
+                  <span>اختيار من الموردين المسجلين</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer text-primary font-bold">
+                  <input
+                    type="radio"
+                    name="supplier_selection_mode"
+                    checked={supplierMode === 'new'}
+                    onChange={() => setSupplierMode('new')}
+                    className="text-primary focus:ring-primary"
+                  />
+                  <span>+ كتابة مورد آخر / جديد مباشرة</span>
+                </label>
+              </div>
+
+              {supplierMode === 'existing' ? (
+                <div>
+                  <Select
+                    label="المورد المسجل"
+                    value={formData.supplier_id}
+                    onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
+                    options={suppliers.map((s) => ({ value: s.id, label: `${s.name} (${s.phone})` }))}
+                    placeholder="— بدون مورد / شراء من فرد أو جهة خاصة —"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2.5 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label="اسم المورد أو المؤسسة الجديد"
+                      isRequired={supplierMode === 'new'}
+                      placeholder="مثال: معرض الأمل أو بن عيسى عمار"
+                      value={newSupplierName}
+                      onChange={(e) => setNewSupplierName(e.target.value)}
+                    />
+                    <Input
+                      label="رقم هاتف المورد"
+                      dir="ltr"
+                      placeholder="مثال: 0661234567"
+                      value={newSupplierPhone}
+                      onChange={(e) => setNewSupplierPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-start gap-2 pt-1 text-xs text-text-secondary bg-white p-2.5 rounded border border-border">
+                    <input
+                      type="checkbox"
+                      id="save_perm_check"
+                      checked={saveNewSupplierPermanently}
+                      onChange={(e) => setSaveNewSupplierPermanently(e.target.checked)}
+                      className="mt-0.5 rounded text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="save_perm_check" className="cursor-pointer leading-relaxed">
+                      حفظ هذا المورد في قائمة الموردين تلقائياً{' '}
+                      <span className="text-text-muted text-[11px] block">
+                        (ملاحظة: يمكنك في أي وقت تعديله أو حذفه من صفحة «الموردين» إذا أردت ذلك، أو إبقاؤه).
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="تاريخ الدخول / الشراء"
                 type="date"

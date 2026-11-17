@@ -1098,6 +1098,50 @@ export const api = {
     return newSale;
   },
 
+  async deleteSale(saleId: string): Promise<boolean> {
+    const sales = getLocalItem<Sale[]>('sales', DEFAULT_SALES);
+    const targetSale = sales.find((s) => s.id === saleId);
+    let vehicleId = targetSale?.vehicle_id;
+
+    if (isSupabaseConfigured) {
+      try {
+        if (!vehicleId) {
+          const { data: sData } = await supabase.from('sales').select('vehicle_id').eq('id', saleId).maybeSingle();
+          if (sData) vehicleId = sData.vehicle_id;
+        }
+
+        const { error: delErr } = await supabase.from('sales').delete().eq('id', saleId);
+        if (delErr) {
+          console.error('Supabase deleteSale error:', delErr);
+          throw new Error(delErr.message || 'تعذر حذف عملية البيع من قاعدة البيانات');
+        }
+
+        if (vehicleId) {
+          await supabase
+            .from('vehicles')
+            .update({ status: 'available', updated_at: new Date().toISOString() })
+            .eq('id', vehicleId);
+        }
+      } catch (err: any) {
+        console.warn('Supabase deleteSale catch:', err);
+        throw err;
+      }
+    }
+
+    setLocalItem('sales', sales.filter((s) => s.id !== saleId));
+    if (vehicleId) {
+      const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
+      const vIdx = vehicles.findIndex((v) => v.id === vehicleId);
+      if (vIdx !== -1) {
+        vehicles[vIdx].status = 'available';
+        vehicles[vIdx].updated_at = new Date().toISOString();
+        setLocalItem('vehicles', vehicles);
+      }
+    }
+
+    return true;
+  },
+
   // --------------------------------------------------
   // 6. لوحة التحكم والمؤشرات (Dashboard Stats)
   // --------------------------------------------------

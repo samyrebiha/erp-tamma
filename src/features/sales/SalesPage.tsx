@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Car,
   User,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Sale, Vehicle, Customer, PaymentMethod, PaymentStatus } from '../../types';
@@ -55,6 +56,12 @@ export const SalesPage: React.FC = () => {
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
   const [newCustomerIdNumber, setNewCustomerIdNumber] = useState('');
+
+  // نافذة تأكيد حذف / إلغاء عملية البيع
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -173,6 +180,22 @@ export const SalesPage: React.FC = () => {
     }
   };
 
+  const handleConfirmDeleteSale = async () => {
+    if (!saleToDelete) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await api.deleteSale(saleToDelete.id);
+      setIsDeleteModalOpen(false);
+      setSaleToDelete(null);
+      await loadAll();
+    } catch (err: any) {
+      setDeleteError(err.message || 'تعذر حذف أو إلغاء عملية البيع');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* شريط الإجراءات والترويسة */}
@@ -227,7 +250,23 @@ export const SalesPage: React.FC = () => {
                   const netPrice = sale.sale_price - (sale.discount || 0);
                   const vin = sale.vehicle?.identifiers?.find((i) => i.identifier_type === 'vin')?.identifier_value;
 
-                  return (
+                  const handleConfirmDeleteSale = async () => {
+    if (!saleToDelete) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await api.deleteSale(saleToDelete.id);
+      setIsDeleteModalOpen(false);
+      setSaleToDelete(null);
+      await loadAll();
+    } catch (err: any) {
+      setDeleteError(err.message || 'تعذر حذف أو إلغاء عملية البيع');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
                     <tr key={sale.id} className="hover:bg-page/50 transition-colors">
                       {/* رقم الوثيقة */}
                       <td className="px-4 py-3 font-latin font-bold text-primary text-xs">
@@ -289,18 +328,32 @@ export const SalesPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* رابط طباعة وثيقة الإخراج والتسليم A4 */}
-                      <td className="px-4 py-3 text-center">
-                        <Link to={`/sales/${sale.id}/delivery-document`}>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="text-xs py-1 h-7"
-                            icon={<Printer className="w-3.5 h-3.5" />}
+                      {/* الإجراءات: طباعة الوثيقة وحذف/إلغاء البيع */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <Link to={`/sales/${sale.id}/delivery-document`}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="text-xs py-1 h-7"
+                              icon={<Printer className="w-3.5 h-3.5" />}
+                            >
+                              وثيقة التسليم PDF
+                            </Button>
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              setSaleToDelete(sale);
+                              setDeleteError(null);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                            title="إلغاء وحذف عملية البيع (إعادة السيارة فوراً للمخزون)"
                           >
-                            وثيقة التسليم PDF
-                          </Button>
-                        </Link>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -518,6 +571,65 @@ export const SalesPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* نافذة تأكيد إلغاء وحذف عملية البيع */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSaleToDelete(null);
+        }}
+        title="تأكيد إلغاء وحذف عملية البيع"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="p-3 rounded-[8px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <p className="text-xs lg:text-sm text-text-secondary leading-relaxed">
+            هل أنت متأكد من رغبتك في إلغاء وحذف عملية البيع رقم{' '}
+            <strong className="text-primary font-latin font-bold">{saleToDelete?.reference_number}</strong>
+            {saleToDelete?.vehicle && (
+              <>
+                {' '}الخاصة بالسيارة{' '}
+                <strong className="text-text-primary">
+                  {saleToDelete.vehicle.brand} {saleToDelete.vehicle.model}
+                </strong>
+              </>
+            )}
+            ؟
+          </p>
+
+          <div className="p-3 rounded-[8px] bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 leading-normal">
+            ✓ تنبيه هام: عند تأكيد الإلغاء، سيتم <strong>إعادة السيارة تلقائياً إلى حالة [متاحة في المخزون]</strong> لتتمكن من إعادة بيعها أو تعديل بياناتها.
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-divider">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setSaleToDelete(null);
+              }}
+            >
+              تراجع
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              isLoading={isDeleting}
+              onClick={handleConfirmDeleteSale}
+            >
+              تأكيد إلغاء البيع والحذف
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

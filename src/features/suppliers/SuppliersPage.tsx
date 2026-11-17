@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, Plus, Phone, Mail, Building, Copy, Check, Car } from 'lucide-react';
+import { Truck, Plus, Phone, Mail, Building, Copy, Check, Car, Trash2, AlertCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { Supplier } from '../../types';
 import { Button } from '../../components/ui/Button';
@@ -25,6 +25,12 @@ export const SuppliersPage: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // نافذة تأكيد حذف المورد
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     loadSuppliers();
   }, []);
@@ -45,6 +51,22 @@ export const SuppliersPage: React.FC = () => {
     navigator.clipboard.writeText(phone);
     setCopiedPhone(id);
     setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
+  const handleConfirmDeleteSupplier = async () => {
+    if (!supplierToDelete) return;
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await api.deleteSupplier(supplierToDelete.id);
+      setIsDeleteModalOpen(false);
+      setSupplierToDelete(null);
+      await loadSuppliers();
+    } catch (err: any) {
+      setDeleteError(err.message || 'تعذر حذف المورد');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleAddSupplier = async (e: React.FormEvent) => {
@@ -135,6 +157,7 @@ export const SuppliersPage: React.FC = () => {
                   <th className="px-4 py-3">العنوان / المقر</th>
                   <th className="px-4 py-3">السجل التجاري</th>
                   <th className="px-4 py-3">السيارات المشتراة</th>
+                  <th className="px-4 py-3 text-center">الإجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-divider">
@@ -178,6 +201,19 @@ export const SuppliersPage: React.FC = () => {
                         <Car className="w-3.5 h-3.5 text-primary" />
                         {s.vehicles_count || 0} سيارة
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => {
+                          setSupplierToDelete(s);
+                          setDeleteError(null);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                        title="حذف هذا المورد"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -268,6 +304,59 @@ export const SuppliersPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* نافذة تأكيد حذف المورد */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSupplierToDelete(null);
+        }}
+        title="تأكيد حذف المورد"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="p-3 rounded-[8px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <p className="text-xs lg:text-sm text-text-secondary leading-relaxed">
+            هل أنت متأكد من رغبتك في حذف المورد{' '}
+            <strong className="text-text-primary">{supplierToDelete?.name}</strong>{' '}
+            ({supplierToDelete?.phone}) من قائمة الموردين؟
+          </p>
+
+          {supplierToDelete && (supplierToDelete.vehicles_count || 0) > 0 && (
+            <div className="p-3 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-normal">
+              تنبيه: هذا المورد مرتبط بـ {supplierToDelete.vehicles_count} سيارة في المخزون. سيتم فك ارتباطه بها مع بقاء السيارات كاملة في المخزون.
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-divider">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setSupplierToDelete(null);
+              }}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              isLoading={isDeleting}
+              onClick={handleConfirmDeleteSupplier}
+            >
+              تأكيد حذف المورد
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
