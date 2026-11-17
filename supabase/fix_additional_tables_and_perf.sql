@@ -98,3 +98,4 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_expenses_vehicle_id ON public.vehicle_exp
 -- جدول vehicle_reservations
 CREATE INDEX IF NOT EXISTS idx_res_customer_id ON public.vehicle_reservations (customer_id);
 CREATE INDEX IF NOT EXISTS idx_res_vehicle_id ON public.vehicle_reservations (vehicle_id);
+
