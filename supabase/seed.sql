@@ -16,15 +16,22 @@ INSERT INTO public.showroom_settings (
     delivery_terms
 ) VALUES (
     '00000000-0000-0000-0000-000000000001',
-    'معرض الأمانة للسيارات',
-    '0550123456',
-    'contact@elamana-auto.dz',
-    'الجزائر العاصمة - الدار البيضاء، شارع المعارض رقم 12',
-    '16/00-1234567B22',
-    '002216012345678',
+    'معرض حسونة لبيع وشراء السيارات',
+    '0550123456 / 0661789012',
+    'contact@hassouna-auto.dz',
+    'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44',
+    '16/00-9874561B21',
+    '002116098745612',
     'د.ج',
-    'تسلم السيارة بكافة وثائقها ومفتاحين أصليين، مع إقرار المشتري بمعاينتها وفحصها فنياً وقبولها بحالتها الراهنة.'
-) ON CONFLICT (id) DO NOTHING;
+    'تم تسليم المركبة المبيّنة تفاصيلها أعلاه للمشتري بعد المعاينة الشاملة والفحص الفني وقبولها بحالتها الراهنة، مع تسليم كامل وثائقها ومفاتيحها الأصلية.'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    phone = EXCLUDED.phone,
+    email = EXCLUDED.email,
+    address = EXCLUDED.address,
+    commercial_register = EXCLUDED.commercial_register,
+    tax_number = EXCLUDED.tax_number,
+    delivery_terms = EXCLUDED.delivery_terms;
 
 -- 2. موردون تجريبيون
 INSERT INTO public.suppliers (id, name, phone, email, address, business_registration_number, contact_person, notes)

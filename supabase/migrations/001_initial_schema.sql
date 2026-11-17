@@ -152,7 +152,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs 
 -- ====================================================================
 CREATE TABLE IF NOT EXISTS public.showroom_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL DEFAULT 'معرض السيارات',
+    name TEXT NOT NULL DEFAULT 'معرض حسونة لبيع وشراء السيارات',
     phone TEXT,
     email TEXT,
     address TEXT,

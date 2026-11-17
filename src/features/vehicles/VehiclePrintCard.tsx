@@ -85,19 +85,21 @@ export const VehiclePrintCard: React.FC = () => {
         <div className="flex items-center justify-between pb-6 border-b-2 border-slate-900">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-navy">
-              {settings?.name || 'معرض السيارات'}
+              {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
             </h1>
-            <p className="text-xs text-text-secondary">{settings?.address || 'الجزائر'}</p>
+            <p className="text-xs text-text-secondary">
+              {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض رقم 44'}
+            </p>
             <p className="text-xs text-text-secondary font-latin">
-              هاتف: {settings?.phone || '—'}
+              هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}
             </p>
           </div>
 
           <div className="text-left space-y-1">
-            <div className="inline-block px-3 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold text-slate-800">
-              بطاقة معلومات سيارة
+            <div className="inline-block px-3 py-1 bg-slate-900 text-white rounded text-xs font-bold tracking-wide">
+              بطاقة معلومات سيارة معتمدة
             </div>
-            <p className="text-[11px] text-text-muted mt-1">تاريخ الإصدار: {currentDateFormatted}</p>
+            <p className="text-[11px] text-text-muted mt-1 font-latin">تاريخ الإصدار: {currentDateFormatted}</p>
           </div>
         </div>
 
@@ -226,9 +228,9 @@ export const VehiclePrintCard: React.FC = () => {
             <p className="font-latin">تاريخ المعاينة والطباعة: {new Date().toLocaleString('ar-DZ')}</p>
           </div>
 
-          <div className="text-center w-48">
+          <div className="text-center w-52">
             <span className="block text-xs font-bold text-slate-800 mb-12">
-              ختم وتوقيع مسؤول المعرض
+              ختم وتوقيع إدارة معرض حسونة للسيارات
             </span>
             <div className="border-b border-slate-400 w-full" />
           </div>

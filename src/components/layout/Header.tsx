@@ -1,5 +1,5 @@
-import React from 'react';
-import { Menu, Database, Plus, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, Database, Plus, Clock, Calendar, Car } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { isSupabaseConfigured } from '../../lib/supabase';
 
@@ -16,8 +16,25 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   onQuickAddVehicle,
 }) => {
+  const [currentDateStr, setCurrentDateStr] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const formatted = new Intl.DateTimeFormat('ar-DZ', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }).format(now);
+      setCurrentDateStr(formatted);
+    };
+
+    updateTime();
+  }, []);
+
   return (
-    <header className="h-16 bg-surface border-b border-border px-4 lg:px-6 flex items-center justify-between no-print sticky top-0 z-30">
+    <header className="h-16 bg-surface border-b border-border px-4 lg:px-6 flex items-center justify-between no-print sticky top-0 z-30 shadow-2xs">
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
@@ -28,24 +45,40 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div>
-          {title && <h2 className="text-base lg:text-lg font-bold text-text-primary leading-tight">{title}</h2>}
-          {subtitle && <p className="text-xs text-text-muted hidden sm:block">{subtitle}</p>}
+          {title && (
+            <h2 className="text-base lg:text-lg font-bold text-text-primary leading-tight">
+              {title}
+            </h2>
+          )}
+          {subtitle && (
+            <p className="text-xs text-text-muted hidden sm:block">{subtitle}</p>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
+        {/* التاريخ والوقت في الجزائر */}
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-page border border-border text-xs text-text-secondary">
+          <Calendar className="w-3.5 h-3.5 text-primary" />
+          <span>{currentDateStr}</span>
+        </div>
+
         {/* مؤشر حالة الربط بقاعدة البيانات */}
         <div
-          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-badge text-[11px] font-medium border"
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-badge text-[11px] font-medium border"
           style={{
             backgroundColor: isSupabaseConfigured ? '#F0FDF4' : '#FEFCE8',
             color: isSupabaseConfigured ? '#15803D' : '#A16207',
             borderColor: isSupabaseConfigured ? '#BBF7D0' : '#FEF08A',
           }}
-          title={isSupabaseConfigured ? 'متصل بقاعدة بيانات Supabase السحابية' : 'الوضع المحلي / بحاجة لضبط مفاتيح Supabase في ملف .env'}
+          title={
+            isSupabaseConfigured
+              ? 'متصل بقاعدة بيانات Supabase السحابية'
+              : 'الوضع المحلي النشط (Mock Local Storage) يعمل فورياً بدون انقطاع'
+          }
         >
           <Database className="w-3.5 h-3.5" />
-          <span>{isSupabaseConfigured ? 'Supabase متصل' : 'الوضع المحلي (Mock)'}</span>
+          <span>{isSupabaseConfigured ? 'قاعدة Supabase السحابية' : 'الوضع المحلي النشط'}</span>
         </div>
 
         {onQuickAddVehicle && (
@@ -62,4 +95,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

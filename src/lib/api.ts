@@ -15,16 +15,16 @@ import { generateReferenceNumber } from './utils';
 // ====================================================================
 const DEFAULT_SETTINGS: ShowroomSettings = {
   id: '00000000-0000-0000-0000-000000000001',
-  name: 'معرض الأمانة للسيارات',
-  phone: '0550 12 34 56',
-  email: 'contact@elamana-auto.dz',
-  address: 'الجزائر العاصمة - الدار البيضاء، شارع المعارض رقم 12',
-  commercial_register: '16/00-1234567B22',
-  tax_number: '002216012345678',
+  name: 'معرض حسونة لبيع وشراء السيارات',
+  phone: '0550 12 34 56 / 0661 78 90 12',
+  email: 'contact@hassouna-auto.dz',
+  address: 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44',
+  commercial_register: '16/00-9874561B21',
+  tax_number: '002116098745612',
   logo_url: '',
   currency: 'د.ج',
   delivery_terms:
-    'تسلم السيارة بكافة وثائقها ومفاتيحها الأصلية، مع إقرار المشتري بمعاينتها وفحصها فنياً وقبولها بحالتها الراهنة.',
+    'تم تسليم المركبة المبيّنة تفاصيلها أعلاه للمشتري بعد المعاينة الشاملة والفحص الفني وقبولها بحالتها الراهنة، مع تسليم كامل وثائقها ومفاتيحها الأصلية.',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -246,14 +246,15 @@ function setLocalItem<T>(key: string, val: T): void {
   }
 }
 
-// تهيئة التخزين إذا لم يكن موجوداً
-if (!localStorage.getItem('erp_tamma_initialized')) {
+// تهيئة التخزين وتحديثه لاسم معرض حسونة
+const savedSettings = getLocalItem<ShowroomSettings | null>('settings', null);
+if (!savedSettings || savedSettings.name !== 'معرض حسونة لبيع وشراء السيارات') {
   setLocalItem('settings', DEFAULT_SETTINGS);
   setLocalItem('suppliers', DEFAULT_SUPPLIERS);
   setLocalItem('customers', DEFAULT_CUSTOMERS);
   setLocalItem('vehicles', DEFAULT_VEHICLES);
   setLocalItem('sales', DEFAULT_SALES);
-  localStorage.setItem('erp_tamma_initialized', 'true');
+  localStorage.setItem('erp_tamma_initialized_v2', 'true');
 }
 
 // ====================================================================

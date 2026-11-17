@@ -92,15 +92,15 @@ export const SaleDeliveryDocument: React.FC = () => {
         <div className="flex items-start justify-between pb-6 border-b-2 border-slate-900">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-navy">
-              {settings?.name || 'معرض السيارات'}
+              {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
             </h1>
             <p className="text-xs text-text-secondary">
-              {settings?.address || 'الجزائر'}
+              {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44'}
             </p>
             <div className="flex items-center gap-4 text-xs text-text-secondary font-latin pt-0.5">
-              <span>هاتف: {settings?.phone || '—'}</span>
-              <span>س.ت: {settings?.commercial_register || '—'}</span>
-              <span>ر.ج: {settings?.tax_number || '—'}</span>
+              <span>هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}</span>
+              <span>س.ت: {settings?.commercial_register || '16/00-9874561B21'}</span>
+              <span>ر.ج: {settings?.tax_number || '002116098745612'}</span>
             </div>
           </div>
 
@@ -306,7 +306,7 @@ export const SaleDeliveryDocument: React.FC = () => {
 
           <div className="text-center">
             <span className="block text-xs font-bold text-slate-900 mb-1">
-              ختم وتوقيع إدارة المعرض
+              ختم وتوقيع إدارة معرض حسونة للسيارات
             </span>
             <span className="block text-[11px] text-text-muted mb-14">
               المسؤول المعتمد لتسليم المركبات
