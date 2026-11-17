@@ -69,6 +69,10 @@ export const VehicleDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (id) loadData(id);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('edit') === 'true') {
+      setIsEditModalOpen(true);
+    }
   }, [id]);
 
   const loadData = async (vehicleId: string) => {

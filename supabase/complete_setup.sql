@@ -450,3 +450,4 @@ INSERT INTO public.sales (
     'paid',
     'تم تسليم السيارة مع وثائق التحويل وكافة المفاتيح الأصلية'
 ) ON CONFLICT (id) DO NOTHING;
+

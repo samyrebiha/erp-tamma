@@ -302,13 +302,13 @@ export const api = {
   // 2. إدارة المخزون والسيارات (Vehicles)
   // --------------------------------------------------
   async getVehicles(searchQuery?: string, statusFilter?: string): Promise<Vehicle[]> {
-    let vehicles: Vehicle[] = [];
+    let vehicles: Vehicle[] | null = null;
 
     if (isSupabaseConfigured) {
       try {
         let query = supabase
           .from('vehicles')
-          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), sale:sales(*)')
+          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
           .order('created_at', { ascending: false });
 
         if (statusFilter && statusFilter !== 'all') {
@@ -317,14 +317,20 @@ export const api = {
 
         const { data, error } = await query;
         if (!error && data) {
-          vehicles = data as Vehicle[];
+          vehicles = data.map((v: any) => ({
+            ...v,
+            reservation: v.reservations?.find((r: any) => r.status === 'active') || null,
+            sale: Array.isArray(v.sale) ? v.sale[0] || null : v.sale || null,
+            images: v.images || [],
+            identifiers: v.identifiers || [],
+          }));
         }
       } catch (err) {
         console.warn('Supabase getVehicles error, fallback to local:', err);
       }
     }
 
-    if (vehicles.length === 0) {
+    if (vehicles === null) {
       vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
       const suppliers = getLocalItem<Supplier[]>('suppliers', DEFAULT_SUPPLIERS);
       const sales = getLocalItem<Sale[]>('sales', DEFAULT_SALES);
@@ -370,6 +376,28 @@ export const api = {
   },
 
   async getVehicleById(id: string): Promise<Vehicle | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('vehicles')
+          .select('*, supplier:suppliers(*), identifiers:vehicle_identifiers(*), images:vehicle_images(*), reservations:vehicle_reservations(*, customer:customers(*)), sale:sales(*, customer:customers(*))')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!error && data) {
+          return {
+            ...data,
+            reservation: (data as any).reservations?.find((r: any) => r.status === 'active') || null,
+            sale: Array.isArray((data as any).sale) ? (data as any).sale[0] || null : (data as any).sale || null,
+            images: (data as any).images || [],
+            identifiers: (data as any).identifiers || [],
+          } as Vehicle;
+        }
+      } catch (err) {
+        console.warn('Supabase getVehicleById error:', err);
+      }
+    }
+
     const list = await this.getVehicles();
     return list.find((v) => v.id === id) || null;
   },
@@ -379,9 +407,30 @@ export const api = {
     identifierType: string,
     excludeVehicleId?: string
   ): Promise<boolean> {
-    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
     const trimmedVal = identifierValue.trim().toUpperCase();
 
+    if (isSupabaseConfigured) {
+      try {
+        let q = supabase
+          .from('vehicle_identifiers')
+          .select('id, vehicle_id')
+          .eq('identifier_type', identifierType)
+          .ilike('identifier_value', trimmedVal);
+
+        if (excludeVehicleId) {
+          q = q.neq('vehicle_id', excludeVehicleId);
+        }
+
+        const { data, error } = await q;
+        if (!error && data && data.length > 0) {
+          return true;
+        }
+      } catch (err) {
+        console.warn('Supabase checkIdentifierExists error:', err);
+      }
+    }
+
+    const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
     return vehicles.some((v) => {
       if (excludeVehicleId && v.id === excludeVehicleId) return false;
       return v.identifiers?.some(
@@ -487,6 +536,51 @@ export const api = {
       updated_at: now,
     };
 
+    // مزامنة مباشرة مع قاعدة بيانات Supabase
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('vehicles')
+          .update({
+            brand: updatedVehicle.brand,
+            model: updatedVehicle.model,
+            trim: updatedVehicle.trim,
+            manufacture_year: updatedVehicle.manufacture_year,
+            color: updatedVehicle.color,
+            fuel_type: updatedVehicle.fuel_type,
+            transmission: updatedVehicle.transmission,
+            mileage: updatedVehicle.mileage,
+            condition_notes: updatedVehicle.condition_notes,
+            status: updatedVehicle.status,
+            supplier_id: updatedVehicle.supplier_id,
+            purchase_date: updatedVehicle.purchase_date,
+            purchase_price: updatedVehicle.purchase_price,
+            extra_costs: updatedVehicle.extra_costs,
+            description: updatedVehicle.description,
+            updated_at: now,
+          })
+          .eq('id', id);
+
+        if (identifiers) {
+          // استبدال الأرقام التعريفية القديمة بالجديدة
+          await supabase.from('vehicle_identifiers').delete().eq('vehicle_id', id);
+          if (updatedIdentifiers.length > 0) {
+            await supabase.from('vehicle_identifiers').insert(
+              updatedIdentifiers.map((i) => ({
+                id: i.id,
+                vehicle_id: id,
+                identifier_type: i.identifier_type,
+                custom_type_name: i.custom_type_name,
+                identifier_value: i.identifier_value,
+              }))
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase updateVehicle error:', err);
+      }
+    }
+
     vehicles[idx] = updatedVehicle;
     setLocalItem('vehicles', vehicles);
 
@@ -498,7 +592,30 @@ export const api = {
     const target = vehicles.find((v) => v.id === id);
     if (!target) throw new Error('السيارة غير موجودة في النظام');
     if (target.status === 'sold') {
-      throw new Error('لا يمكن حذف سيارة تم بيعها وإخراجها للمشتري؛ السجل محمي قانونياً');
+      throw new Error('لا يمكن حذف سيارة تم بيعها وإخراجها للمشتري؛ السجل محمي قانونياً وتوثيقياً');
+    }
+
+    // حذف آمن من Supabase مع الجداول التابعة
+    if (isSupabaseConfigured) {
+      try {
+        // التحقق من حالة السيارة في قاعدة البيانات
+        const { data: vCheck } = await supabase.from('vehicles').select('status').eq('id', id).maybeSingle();
+        if (vCheck && vCheck.status === 'sold') {
+          throw new Error('لا يمكن حذف سيارة تم بيعها وإخراجها للمشتري؛ السجل محمي قانونياً');
+        }
+
+        await supabase.from('vehicle_identifiers').delete().eq('vehicle_id', id);
+        await supabase.from('vehicle_images').delete().eq('vehicle_id', id);
+        await supabase.from('vehicle_reservations').delete().eq('vehicle_id', id);
+        const { error } = await supabase.from('vehicles').delete().eq('id', id);
+        if (error) {
+          console.error('Supabase deleteVehicle error:', error);
+          throw new Error(error.message || 'تعذر حذف السيارة من قاعدة البيانات');
+        }
+      } catch (err: any) {
+        console.warn('Supabase deleteVehicle catch:', err);
+        if (err.message && err.message.includes('لا يمكن')) throw err;
+      }
     }
 
     const filtered = vehicles.filter((v) => v.id !== id);
@@ -533,6 +650,26 @@ export const api = {
       status: 'active',
     };
 
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicle_reservations').insert([
+          {
+            id: reservationId,
+            vehicle_id: data.vehicleId,
+            customer_id: data.customerId,
+            deposit_amount: data.depositAmount,
+            reserved_at: now,
+            expires_at: data.expiresAt || null,
+            notes: data.notes || null,
+            status: 'active',
+          },
+        ]);
+        await supabase.from('vehicles').update({ status: 'reserved', updated_at: now }).eq('id', data.vehicleId);
+      } catch (err) {
+        console.warn('Supabase reserveVehicle error:', err);
+      }
+    }
+
     vehicles[vIndex].status = 'reserved';
     vehicles[vIndex].updated_at = now;
     setLocalItem('vehicles', vehicles);
@@ -544,11 +681,29 @@ export const api = {
   },
 
   async cancelReservation(vehicleId: string): Promise<boolean> {
+    const now = new Date().toISOString();
+    if (isSupabaseConfigured) {
+      try {
+        await supabase
+          .from('vehicle_reservations')
+          .update({ status: 'cancelled' })
+          .eq('vehicle_id', vehicleId)
+          .eq('status', 'active');
+
+        await supabase
+          .from('vehicles')
+          .update({ status: 'available', updated_at: now })
+          .eq('id', vehicleId);
+      } catch (err) {
+        console.warn('Supabase cancelReservation error:', err);
+      }
+    }
+
     const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
     const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
     if (vIndex !== -1) {
       vehicles[vIndex].status = 'available';
-      vehicles[vIndex].updated_at = new Date().toISOString();
+      vehicles[vIndex].updated_at = now;
       setLocalItem('vehicles', vehicles);
     }
 
@@ -569,27 +724,55 @@ export const api = {
 
     const existingImages = vehicles[vIndex].images || [];
     const shouldBePrimary = isPrimary || existingImages.length === 0;
+    const now = new Date().toISOString();
 
     const newImg: VehicleImage = {
       id: crypto.randomUUID(),
       vehicle_id: vehicleId,
       storage_path: storagePath,
       is_primary: shouldBePrimary,
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
+
+    if (isSupabaseConfigured) {
+      try {
+        if (shouldBePrimary) {
+          await supabase.from('vehicle_images').update({ is_primary: false }).eq('vehicle_id', vehicleId);
+        }
+        await supabase.from('vehicle_images').insert([
+          {
+            id: newImg.id,
+            vehicle_id: vehicleId,
+            storage_path: storagePath,
+            is_primary: shouldBePrimary,
+            created_at: now,
+          },
+        ]);
+      } catch (err) {
+        console.warn('Supabase addVehicleImage error:', err);
+      }
+    }
 
     if (shouldBePrimary) {
       existingImages.forEach((img) => (img.is_primary = false));
     }
 
     vehicles[vIndex].images = [...existingImages, newImg];
-    vehicles[vIndex].updated_at = new Date().toISOString();
+    vehicles[vIndex].updated_at = now;
     setLocalItem('vehicles', vehicles);
 
     return newImg;
   },
 
   async removeVehicleImage(vehicleId: string, imageId: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicle_images').delete().eq('id', imageId);
+      } catch (err) {
+        console.warn('Supabase removeVehicleImage error:', err);
+      }
+    }
+
     const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
     const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
     if (vIndex === -1) return false;
@@ -597,6 +780,13 @@ export const api = {
     let images = (vehicles[vIndex].images || []).filter((img) => img.id !== imageId);
     if (images.length > 0 && !images.some((img) => img.is_primary)) {
       images[0].is_primary = true;
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.from('vehicle_images').update({ is_primary: true }).eq('id', images[0].id);
+        } catch (e) {
+          console.warn('Supabase update primary image error:', e);
+        }
+      }
     }
     vehicles[vIndex].images = images;
     vehicles[vIndex].updated_at = new Date().toISOString();
@@ -605,6 +795,15 @@ export const api = {
   },
 
   async setPrimaryImage(vehicleId: string, imageId: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('vehicle_images').update({ is_primary: false }).eq('vehicle_id', vehicleId);
+        await supabase.from('vehicle_images').update({ is_primary: true }).eq('id', imageId);
+      } catch (err) {
+        console.warn('Supabase setPrimaryImage error:', err);
+      }
+    }
+
     const vehicles = getLocalItem<Vehicle[]>('vehicles', DEFAULT_VEHICLES);
     const vIndex = vehicles.findIndex((v) => v.id === vehicleId);
     if (vIndex === -1) return false;
@@ -657,7 +856,17 @@ export const api = {
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('customers').insert([newCustomer]);
+        await supabase.from('customers').insert([
+          {
+            id: newCustomer.id,
+            full_name: newCustomer.full_name,
+            phone: newCustomer.phone,
+            secondary_phone: newCustomer.secondary_phone,
+            address: newCustomer.address,
+            identity_number: newCustomer.identity_number,
+            notes: newCustomer.notes,
+          },
+        ]);
       } catch (err) {
         console.warn('Supabase createCustomer fallback:', err);
       }
@@ -666,6 +875,40 @@ export const api = {
     const current = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
     setLocalItem('customers', [newCustomer, ...current]);
     return newCustomer;
+  },
+
+  async updateCustomer(id: string, data: Partial<Customer>): Promise<Customer> {
+    const now = new Date().toISOString();
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('customers').update({ ...data, updated_at: now }).eq('id', id);
+      } catch (err) {
+        console.warn('Supabase updateCustomer error:', err);
+      }
+    }
+
+    const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
+    const idx = customers.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      customers[idx] = { ...customers[idx], ...data, updated_at: now };
+      setLocalItem('customers', customers);
+      return customers[idx];
+    }
+    throw new Error('العميل غير موجود');
+  },
+
+  async deleteCustomer(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('customers').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase deleteCustomer error:', err);
+      }
+    }
+
+    const customers = getLocalItem<Customer[]>('customers', DEFAULT_CUSTOMERS);
+    setLocalItem('customers', customers.filter((c) => c.id !== id));
+    return true;
   },
 
   // --------------------------------------------------
@@ -703,7 +946,18 @@ export const api = {
 
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('suppliers').insert([newSupplier]);
+        await supabase.from('suppliers').insert([
+          {
+            id: newSupplier.id,
+            name: newSupplier.name,
+            phone: newSupplier.phone,
+            email: newSupplier.email,
+            address: newSupplier.address,
+            business_registration_number: newSupplier.business_registration_number,
+            contact_person: newSupplier.contact_person,
+            notes: newSupplier.notes,
+          },
+        ]);
       } catch (err) {
         console.warn('Supabase createSupplier fallback:', err);
       }
@@ -712,6 +966,40 @@ export const api = {
     const current = getLocalItem<Supplier[]>('suppliers', DEFAULT_SUPPLIERS);
     setLocalItem('suppliers', [newSupplier, ...current]);
     return newSupplier;
+  },
+
+  async updateSupplier(id: string, data: Partial<Supplier>): Promise<Supplier> {
+    const now = new Date().toISOString();
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('suppliers').update({ ...data, updated_at: now }).eq('id', id);
+      } catch (err) {
+        console.warn('Supabase updateSupplier error:', err);
+      }
+    }
+
+    const suppliers = getLocalItem<Supplier[]>('suppliers', DEFAULT_SUPPLIERS);
+    const idx = suppliers.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      suppliers[idx] = { ...suppliers[idx], ...data, updated_at: now };
+      setLocalItem('suppliers', suppliers);
+      return suppliers[idx];
+    }
+    throw new Error('المورد غير موجود');
+  },
+
+  async deleteSupplier(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('suppliers').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase deleteSupplier error:', err);
+      }
+    }
+
+    const suppliers = getLocalItem<Supplier[]>('suppliers', DEFAULT_SUPPLIERS);
+    setLocalItem('suppliers', suppliers.filter((s) => s.id !== id));
+    return true;
   },
 
   // --------------------------------------------------

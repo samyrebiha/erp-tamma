@@ -8,6 +8,7 @@ import {
   Printer,
   Receipt,
   Eye,
+  Edit,
   Trash2,
   Copy,
   Check,
@@ -40,6 +41,11 @@ export const VehiclesPage: React.FC = () => {
   // نافذة إضافة سيارة جديدة
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // نافذة تأكيد حذف سيارة
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // حالة نموذج الإضافة
   const [formData, setFormData] = useState({
@@ -112,6 +118,22 @@ export const VehiclesPage: React.FC = () => {
     const updated = [...identifiers];
     updated[index] = { ...updated[index], [field]: value };
     setIdentifiers(updated);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!vehicleToDelete) return;
+    try {
+      setIsSubmitting(true);
+      setDeleteError(null);
+      await api.deleteVehicle(vehicleToDelete.id);
+      setIsDeleteModalOpen(false);
+      setVehicleToDelete(null);
+      await loadData();
+    } catch (err: any) {
+      setDeleteError(err.message || 'تعذر حذف السيارة');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmitNewVehicle = async (e: React.FormEvent) => {
@@ -386,6 +408,15 @@ export const VehiclesPage: React.FC = () => {
                             </button>
                           </Link>
 
+                          <Link to={`/vehicles/${v.id}?edit=true`}>
+                            <button
+                              className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-amber-600 hover:bg-white hover:border-amber-400 transition-colors"
+                              title="تعديل بيانات السيارة"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </Link>
+
                           <Link to={`/vehicles/${v.id}/print`}>
                             <button
                               className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-text-primary hover:bg-white transition-colors"
@@ -404,6 +435,20 @@ export const VehiclesPage: React.FC = () => {
                                 <Receipt className="w-4 h-4" />
                               </button>
                             </Link>
+                          )}
+
+                          {v.status !== 'sold' && (
+                            <button
+                              onClick={() => {
+                                setVehicleToDelete(v);
+                                setDeleteError(null);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-[6px] border border-border text-text-secondary hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+                              title="حذف السيارة من المخزون"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -653,6 +698,59 @@ export const VehiclesPage: React.FC = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* نافذة تأكيد حذف السيارة نهائياً من المخزون */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setVehicleToDelete(null);
+        }}
+        title="تأكيد حذف السيارة من المخزون"
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="p-3 rounded-[8px] bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <p className="text-xs lg:text-sm text-text-secondary leading-relaxed">
+            هل أنت متأكد من رغبتك في حذف السيارة{' '}
+            <strong className="text-text-primary">
+              {vehicleToDelete?.brand} {vehicleToDelete?.model} ({vehicleToDelete?.manufacture_year || '—'})
+            </strong>{' '}
+            نهائياً من المخزون وكافة الأرقام التعريفية والصور التابعة لها؟
+          </p>
+
+          <div className="p-3 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-800 leading-normal">
+            تنبيه: لا يمكن التراجع عن هذه العملية بعد التأكيد. إذا كانت السيارة مباعة فلن يسمح النظام بحذفها حفاظاً على السجلات المالية والقانونية.
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-divider">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setVehicleToDelete(null);
+              }}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              isLoading={isSubmitting}
+              onClick={handleConfirmDelete}
+            >
+              تأكيد الحذف النهائي
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
