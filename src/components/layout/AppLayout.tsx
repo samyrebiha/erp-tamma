@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 
 export const AppLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showroomName, setShowroomName] = useState('معرض حسونة لبيع وشراء السيارات');
+  const [showroomName, setShowroomName] = useState('معرض حسونة أوتو');
   const location = useLocation();
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export const AppLayout: React.FC = () => {
     if (path === '/') {
       return {
         title: 'لوحة القيادة والمتابعة المركزية',
-        subtitle: 'معرض حسونة لبيع وشراء السيارات — متابعة المخزون والعمليات اليومية',
+        subtitle: 'معرض حسونة أوتو — بيع، شراء، كراء، وتبادل السيارات (الوادي)',
       };
     }
     if (path.startsWith('/vehicles')) {

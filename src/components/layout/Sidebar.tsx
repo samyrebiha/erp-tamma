@@ -71,16 +71,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="overflow-hidden">
                 <div className="flex items-center gap-1.5">
                   <h1 className="text-sm font-extrabold text-navy tracking-tight truncate">
-                    معرض حسونة
+                    معرض حسونة أوتو
                   </h1>
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary-soft text-primary">
                     AUTO
                   </span>
                 </div>
-                <p className="text-[11px] font-semibold text-text-secondary truncate mt-0.5">
-                  لبيع وشراء السيارات
+                <p className="text-[10px] font-semibold text-text-secondary truncate mt-0.5">
+                  أميه ونسة – الوادي، طريق تقرت
                 </p>
-                <p className="text-[10px] text-text-muted truncate">الجزائر • نظام الإدارة المتكامل</p>
+                <p className="text-[10px] text-primary font-bold truncate">بيع • شراء • كراء • تبادل</p>
               </div>
             </div>
 

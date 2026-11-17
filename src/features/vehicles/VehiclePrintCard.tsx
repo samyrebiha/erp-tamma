@@ -88,13 +88,13 @@ export const VehiclePrintCard: React.FC = () => {
             <img src="/logo.svg" alt="شعار المعرض" className="w-16 h-16 object-contain shrink-0" />
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-navy">
-                {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
+                {settings?.name || 'معرض حسونة أوتو'}
               </h1>
               <p className="text-xs text-text-secondary">
-                {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض رقم 44'}
+                {settings?.address || 'أميه ونسة – الوادي، طريق تقرت'}
               </p>
               <p className="text-xs text-text-secondary font-latin">
-                هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}
+                هاتف: {settings?.phone || '0662309669'} • بيع، شراء، كراء، وتبادل السيارات
               </p>
             </div>
           </div>

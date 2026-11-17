@@ -111,17 +111,17 @@ export const DashboardPage: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 <Award className="w-3.5 h-3.5" />
-                المؤسسة المعتمدة لبيع وشراء المركبات
+                بيع • شراء • كراء • تبادل السيارات
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-white/10 text-slate-200 border border-white/10 font-latin">
-                RC: {settings?.commercial_register || '16/00-9874561B21'}
+                هاتف: {settings?.phone || '0662309669'}
               </span>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-slate-300">
               <span className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-primary-soft" />
-                {settings?.address || 'الجزائر العاصمة - الدار البيضاء'}
+                {settings?.address || 'أميه ونسة – الوادي، طريق تقرت'}
               </span>
               <span className="text-white/30">•</span>
               <span className="font-bold text-amber-400">العملة: د.ج (DZD)</span>

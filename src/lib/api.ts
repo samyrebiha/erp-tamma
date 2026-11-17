@@ -17,16 +17,16 @@ import { generateReferenceNumber } from './utils';
 // ====================================================================
 const DEFAULT_SETTINGS: ShowroomSettings = {
   id: '00000000-0000-0000-0000-000000000001',
-  name: 'معرض حسونة لبيع وشراء السيارات',
-  phone: '0550 12 34 56 / 0661 78 90 12',
+  name: 'معرض حسونة أوتو',
+  phone: '0662309669',
   email: 'contact@hassouna-auto.dz',
-  address: 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44',
-  commercial_register: '16/00-9874561B21',
-  tax_number: '002116098745612',
-  logo_url: '',
+  address: 'أميه ونسة – الوادي، طريق تقرت',
+  commercial_register: '39/00-9874561B21',
+  tax_number: '002139098745612',
+  logo_url: '/logo.svg',
   currency: 'د.ج',
   delivery_terms:
-    'تم تسليم المركبة المبيّنة تفاصيلها أعلاه للمشتري بعد المعاينة الشاملة والفحص الفني وقبولها بحالتها الراهنة، مع تسليم كامل وثائقها ومفاتيحها الأصلية.',
+    'خدماتنا: بيع، شراء، كراء (تأجير)، وتبادل السيارات الجديدة والمستعملة. تم تسليم المركبة ومفاتيحها بعد المعاينة والفحص الفني وقبولها بحالتها الراهنة.',
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -248,15 +248,15 @@ function setLocalItem<T>(key: string, val: T): void {
   }
 }
 
-// تهيئة التخزين وتحديثه لاسم معرض حسونة
+// تهيئة التخزين وتحديثه لاسم معرض حسونة أوتو
 const savedSettings = getLocalItem<ShowroomSettings | null>('settings', null);
-if (!savedSettings || savedSettings.name !== 'معرض حسونة لبيع وشراء السيارات') {
+if (!savedSettings || savedSettings.name !== 'معرض حسونة أوتو' || savedSettings.phone !== '0662309669') {
   setLocalItem('settings', DEFAULT_SETTINGS);
   setLocalItem('suppliers', DEFAULT_SUPPLIERS);
   setLocalItem('customers', DEFAULT_CUSTOMERS);
   setLocalItem('vehicles', DEFAULT_VEHICLES);
   setLocalItem('sales', DEFAULT_SALES);
-  localStorage.setItem('erp_tamma_initialized_v2', 'true');
+  localStorage.setItem('erp_tamma_initialized_v3', 'true');
 }
 
 // ====================================================================

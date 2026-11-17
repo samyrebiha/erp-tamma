@@ -95,15 +95,14 @@ export const SaleDeliveryDocument: React.FC = () => {
             <img src="/logo.svg" alt="شعار المعرض" className="w-16 h-16 object-contain shrink-0" />
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-navy">
-                {settings?.name || 'معرض حسونة لبيع وشراء السيارات'}
+                {settings?.name || 'معرض حسونة أوتو'}
               </h1>
               <p className="text-xs text-text-secondary">
-                {settings?.address || 'الجزائر العاصمة - الدار البيضاء، طريق المعارض الدولي رقم 44'}
+                {settings?.address || 'أميه ونسة – الوادي، طريق تقرت'}
               </p>
               <div className="flex items-center gap-4 text-xs text-text-secondary font-latin pt-0.5">
-                <span>هاتف: {settings?.phone || '0550 12 34 56 / 0661 78 90 12'}</span>
-                <span>س.ت: {settings?.commercial_register || '16/00-9874561B21'}</span>
-                <span>ر.ج: {settings?.tax_number || '002116098745612'}</span>
+                <span>هاتف: {settings?.phone || '0662309669'}</span>
+                <span>بيع • شراء • كراء • تبادل السيارات</span>
               </div>
             </div>
           </div>
