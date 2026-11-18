@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Database, Plus, Clock, Calendar, Car } from 'lucide-react';
+import { Menu, Database, Plus, Clock, Calendar, Car, Lock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { useShowroomAuth } from '../../context/ShowroomAuthContext';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   onQuickAddVehicle,
 }) => {
+  const { lockShowroom } = useShowroomAuth();
   const [currentDateStr, setCurrentDateStr] = useState('');
 
   useEffect(() => {
@@ -83,6 +85,16 @@ export const Header: React.FC<HeaderProps> = ({
             إضافة سيارة
           </Button>
         )}
+
+        {/* زر قفل الشاشة السريع */}
+        <button
+          onClick={lockShowroom}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border border-border bg-page hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-xs text-text-secondary transition-colors"
+          title="قفل الشاشة ولوحة التحكم"
+        >
+          <Lock className="w-3.5 h-3.5 text-text-muted hover:text-rose-600" />
+          <span className="hidden sm:inline">قفل</span>
+        </button>
       </div>
     </header>
   );
