@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 // التجزئة المشفرة SHA-256 لكلمة سر المعرض (لا تحتوي على الرمز الصريح نهائياً)
 const SHOWROOM_AUTH_HASH = 'd3bbb6153cf36d4da3fb6b974ed23fce77cbfefdbd3f965b7d7dbb96a975fa08';
@@ -6,7 +6,7 @@ const AUTH_STORAGE_KEY = 'hassouna_auto_auth_session';
 
 interface ShowroomAuthContextType {
   isUnlocked: boolean;
-  unlockShowroom: (password: string) => Promise<boolean>;
+  unlockShowroom: (password: string, rememberMe?: boolean) => Promise<boolean>;
   lockShowroom: () => void;
 }
 
@@ -23,33 +23,49 @@ async function hashPassword(plainText: string): Promise<string> {
 
 export const ShowroomAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-    // استرجاع حالة الجلسة المحفوظة
     try {
-      const saved = sessionStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(AUTH_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // جلسة صالحة لمدة 24 ساعة
+      // 1. التحقق من التخزين الدائم أولاً (تذكرني)
+      const localSaved = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (localSaved) {
+        const parsed = JSON.parse(localSaved);
         if (parsed?.token === SHOWROOM_AUTH_HASH && parsed?.expires > Date.now()) {
           return true;
         }
       }
+
+      // 2. التحقق من تخزين الجلسة الحالية
+      const sessionSaved = sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (sessionSaved) {
+        const parsed = JSON.parse(sessionSaved);
+        if (parsed?.token === SHOWROOM_AUTH_HASH) {
+          return true;
+        }
+      }
     } catch {
-      // في حال وجود خطأ في قراءة التخزين
+      // تجاهل أخطاء التخزين المؤقت
     }
     return false;
   });
 
-  const unlockShowroom = async (password: string): Promise<boolean> => {
+  const unlockShowroom = async (password: string, rememberMe: boolean = true): Promise<boolean> => {
     try {
       const hashedInput = await hashPassword(password);
       if (hashedInput === SHOWROOM_AUTH_HASH) {
         setIsUnlocked(true);
+
         const sessionData = {
           token: SHOWROOM_AUTH_HASH,
-          expires: Date.now() + 24 * 60 * 60 * 1000, // 24 ساعة
+          // إذا اختار تذكرني تبقى الجلسة صالحة لـ 30 يوماً
+          expires: Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000),
         };
+
+        if (rememberMe) {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionData));
+        } else {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+
         sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionData));
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionData));
         return true;
       }
     } catch (err) {
@@ -78,4 +94,3 @@ export const useShowroomAuth = (): ShowroomAuthContextType => {
   }
   return context;
 };
-
